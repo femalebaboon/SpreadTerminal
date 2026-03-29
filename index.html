@@ -512,10 +512,16 @@ const sparkHist = {}; // coin -> [{ts, entries: [{pair, dev}]}]
 COINS.forEach(c => sparkHist[c] = []);
 const SPARK_MAX = 600;
 
-// Distribution scatter data: coin -> [{dev, dur, pair, ts}]
+// Distribution histogram: coin -> pair -> {bins: Map<binIndex, timeMs>, totalTime}
 const distribData = {};
-COINS.forEach(c => distribData[c] = []);
-const DISTRIB_MAX = 500;
+const DISTRIB_BIN_SIZE = 1; // 1 dB per bin
+COINS.forEach(c => {
+  distribData[c] = {};
+  PAIRS.forEach(([a, b]) => {
+    const pair = `${EX_SHORT[a]}-${EX_SHORT[b]}`;
+    distribData[c][pair] = { bins: new Map(), totalTime: 0 };
+  });
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MATH
@@ -793,7 +799,6 @@ function compute() {
           if (dur >= CONFIRM_MS) {
             const peak = st.devSign > 0 ? st.maxPos : st.maxNeg;
             addAlert(coin, ex1, ex2, peak, dur);
-            addDistribPoint(coin, ex1, ex2, peak, dur);
           }
         }
         st.devStart = null;
@@ -931,12 +936,18 @@ function renderAlerts() {
   }).join('');
 }
 
-// ─── Distribution Scatter ────────────────────────────────────────────────────
+// ─── Distribution Histogram ──────────────────────────────────────────────────
 
-function addDistribPoint(coin, ex1, ex2, dev, dur) {
-  const pair = `${EX_SHORT[ex1]}-${EX_SHORT[ex2]}`;
-  distribData[coin].push({ dev, dur, pair, ts: Date.now() });
-  if (distribData[coin].length > DISTRIB_MAX) distribData[coin].shift();
+function updateDistrib(data) {
+  const dt = 250; // tick interval ms
+  data.forEach(d => {
+    const pair = `${EX_SHORT[d.ex1]}-${EX_SHORT[d.ex2]}`;
+    const hist = distribData[d.coin][pair];
+    if (!hist) return;
+    const bin = Math.round(d.dev / DISTRIB_BIN_SIZE);
+    hist.bins.set(bin, (hist.bins.get(bin) || 0) + dt);
+    hist.totalTime += dt;
+  });
 }
 
 function drawDistrib(coin) {
@@ -950,103 +961,115 @@ function drawDistrib(coin) {
   ctx.scale(dpr, dpr);
 
   const w = rect.width, h = rect.height;
-  const pts = distribData[coin];
-
-  document.getElementById(`distrib-cnt-${coin}`).textContent = `${pts.length} pts`;
-
-  ctx.clearRect(0, 0, w, h);
-
-  if (pts.length < 1) {
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    ctx.font = '10px JetBrains Mono, monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('Collecting deviation data…', w / 2, h / 2);
-    return;
-  }
-
   const pairColors = { 'HL-LT': '#00ff88', 'HL-EX': '#ff3355', 'LT-EX': '#58a6ff' };
-  const margin = { top: 16, right: 10, bottom: 22, left: 42 };
+  const margin = { top: 16, right: 10, bottom: 22, left: 32 };
   const pw = w - margin.left - margin.right;
   const ph = h - margin.top - margin.bottom;
 
-  // Ranges
-  let devMin = 0, devMax = 0, durMax = 0;
-  pts.forEach(p => {
-    if (p.dev < devMin) devMin = p.dev;
-    if (p.dev > devMax) devMax = p.dev;
-    if (p.dur > durMax) durMax = p.dur;
+  // Collect all bins across pairs to find x range
+  let allEmpty = true;
+  let binMin = 0, binMax = 0;
+  const pairEntries = [];
+  Object.entries(distribData[coin]).forEach(([pair, hist]) => {
+    if (hist.bins.size === 0) return;
+    allEmpty = false;
+    hist.bins.forEach((_, bin) => {
+      if (bin < binMin) binMin = bin;
+      if (bin > binMax) binMax = bin;
+    });
+    pairEntries.push([pair, hist]);
   });
-  const devPad = Math.max((devMax - devMin) * 0.15, 3);
-  devMin -= devPad; devMax += devPad;
-  durMax = Math.max(durMax * 1.15, 2000);
+
+  const totalSamples = pairEntries.reduce((s, [, h]) => s + h.totalTime, 0);
+  document.getElementById(`distrib-cnt-${coin}`).textContent = totalSamples > 0
+    ? `${(totalSamples / 1000).toFixed(0)}s`
+    : '0s';
+
+  ctx.clearRect(0, 0, w, h);
+
+  if (allEmpty) {
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Collecting data…', w / 2, h / 2);
+    return;
+  }
+
+  // Pad x range
+  binMin = Math.min(binMin, -3);
+  binMax = Math.max(binMax, 3);
+  const binCount = binMax - binMin + 1;
+
+  // Compute normalized values: relative time = (timeInBin / totalTime) * binCount
+  // This makes the average height = 1, so Y scale 0..3 shows the shape well
+  const Y_MAX = 3;
 
   // Grid
   ctx.strokeStyle = 'rgba(255,255,255,0.06)';
   ctx.lineWidth = 0.5;
   ctx.setLineDash([2, 3]);
-  for (let i = 0; i <= 4; i++) {
-    const y = margin.top + (i / 4) * ph;
+  for (let i = 0; i <= 3; i++) {
+    const y = margin.top + ph - (i / Y_MAX) * ph;
     ctx.beginPath(); ctx.moveTo(margin.left, y); ctx.lineTo(w - margin.right, y); ctx.stroke();
-  }
-  for (let i = 0; i <= 4; i++) {
-    const x = margin.left + (i / 4) * pw;
-    ctx.beginPath(); ctx.moveTo(x, margin.top); ctx.lineTo(x, h - margin.bottom); ctx.stroke();
   }
   ctx.setLineDash([]);
 
-  // Zero line (x=0)
-  const zeroX = margin.left + ((0 - devMin) / (devMax - devMin)) * pw;
-  if (zeroX > margin.left && zeroX < w - margin.right) {
+  // Zero deviation line
+  const zeroX = margin.left + ((0 - binMin) / (binMax - binMin)) * pw;
+  if (zeroX >= margin.left && zeroX <= w - margin.right) {
     ctx.strokeStyle = 'rgba(255,255,255,0.15)';
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(zeroX, margin.top); ctx.lineTo(zeroX, h - margin.bottom); ctx.stroke();
   }
 
-  // Plot points
-  pts.forEach(p => {
-    const x = margin.left + ((p.dev - devMin) / (devMax - devMin)) * pw;
-    const y = margin.top + ph - ((p.dur / durMax) * ph);
-    const color = pairColors[p.pair] || '#ffffff';
-
-    ctx.globalAlpha = 0.6;
-    ctx.fillStyle = color;
+  // Draw each pair as a line
+  const barWidth = pw / binCount;
+  pairEntries.forEach(([pair, hist]) => {
+    const color = pairColors[pair] || '#ffffff';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(x, y, 3, 0, Math.PI * 2);
-    ctx.fill();
 
-    // Glow for long-lasting deviations
-    if (p.dur > 5000) {
-      ctx.globalAlpha = 0.15;
-      ctx.beginPath();
-      ctx.arc(x, y, 6, 0, Math.PI * 2);
-      ctx.fill();
+    let first = true;
+    for (let bin = binMin; bin <= binMax; bin++) {
+      const t = hist.bins.get(bin) || 0;
+      const relTime = hist.totalTime > 0 ? (t / hist.totalTime) * binCount : 0;
+      const x = margin.left + ((bin - binMin + 0.5) / binCount) * pw;
+      const y = margin.top + ph - Math.min(relTime / Y_MAX, 1) * ph;
+      if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
     }
+    ctx.stroke();
+
+    // Fill under curve
+    ctx.globalAlpha = 0.08;
+    ctx.fillStyle = color;
+    ctx.lineTo(margin.left + pw, margin.top + ph);
+    ctx.lineTo(margin.left, margin.top + ph);
+    ctx.closePath();
+    ctx.fill();
     ctx.globalAlpha = 1;
   });
 
-  // Axis labels
+  // Y axis labels
   ctx.fillStyle = 'rgba(255,255,255,0.3)';
   ctx.font = '8px JetBrains Mono, monospace';
-
-  // X axis (deviation)
-  ctx.textAlign = 'center';
-  for (let i = 0; i <= 4; i++) {
-    const v = devMin + (i / 4) * (devMax - devMin);
-    const x = margin.left + (i / 4) * pw;
-    ctx.fillText(v.toFixed(0), x, h - 4);
-  }
-
-  // Y axis (duration)
   ctx.textAlign = 'right';
-  for (let i = 0; i <= 4; i++) {
-    const v = (i / 4) * durMax / 1000;
-    const y = margin.top + ph - (i / 4) * ph;
-    ctx.fillText(v.toFixed(1) + 's', margin.left - 4, y + 3);
+  for (let i = 0; i <= 3; i++) {
+    const y = margin.top + ph - (i / Y_MAX) * ph;
+    ctx.fillText(i.toString(), margin.left - 4, y + 3);
   }
 
-  // Axis titles
+  // X axis labels (deviation in dB)
+  ctx.textAlign = 'center';
+  const step = Math.max(1, Math.ceil(binCount / 8));
+  for (let bin = binMin; bin <= binMax; bin += step) {
+    const x = margin.left + ((bin - binMin + 0.5) / binCount) * pw;
+    const val = bin * DISTRIB_BIN_SIZE;
+    ctx.fillText((val > 0 ? '+' : '') + val.toFixed(0), x, h - 4);
+  }
+
+  // Axis title
   ctx.fillStyle = 'rgba(255,255,255,0.2)';
-  ctx.font = '8px JetBrains Mono, monospace';
   ctx.textAlign = 'center';
   ctx.fillText('deviation (dB)', margin.left + pw / 2, h - margin.bottom + 18);
 
@@ -1182,8 +1205,9 @@ function tick() {
   renderPrices();
   renderSpreads(data);
   updateSparkData(data);
+  updateDistrib(data);
   COINS.forEach(drawSpark);
-  if (ticks % 4 === 0) COINS.forEach(drawDistrib); // redraw every ~1s
+  if (ticks % 4 === 0) COINS.forEach(drawDistrib);
   renderAlerts();
 
   document.getElementById('clock').textContent = new Date().toLocaleTimeString('en', { hour12: false });
@@ -1198,7 +1222,10 @@ function resetAll() {
     st.ewmaTs = null;
   });
   alerts.length = 0;
-  COINS.forEach(c => { sparkHist[c] = []; distribData[c] = []; });
+  COINS.forEach(c => {
+    sparkHist[c] = [];
+    Object.values(distribData[c]).forEach(h => { h.bins.clear(); h.totalTime = 0; });
+  });
   ticks = 0;
 }
 
