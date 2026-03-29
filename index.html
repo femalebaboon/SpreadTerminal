@@ -28,7 +28,8 @@
     color: var(--text);
     font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
     font-size: 12px;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     height: 100vh;
     user-select: none;
   }
@@ -98,7 +99,7 @@
   /* ─── Main Layout ─── */
   .main {
     display: grid;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: auto 1fr auto auto;
     gap: 1px;
     background: var(--border);
     height: calc(100vh - 38px);
@@ -272,6 +273,29 @@
     50% { opacity: 0.6; }
   }
 
+  /* ─── Distribution Charts ─── */
+  .distrib-area {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    min-height: 180px;
+  }
+
+  .distrib-panel {
+    background: var(--panel);
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  canvas.distrib {
+    width: 100%;
+    flex: 1;
+    display: block;
+    min-height: 140px;
+  }
+
   /* ─── Sparklines + Alerts ─── */
   .bottom-area {
     display: grid;
@@ -377,6 +401,31 @@
     </div>
   </div>
 
+  <!-- Distribution charts -->
+  <div class="distrib-area">
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:var(--yellow)">BTC Distribution</span>
+        <span class="panel-subtitle" id="distrib-cnt-BTC">0 pts</span>
+      </div>
+      <canvas class="distrib" id="distrib-BTC"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:var(--accent)">XAU Distribution</span>
+        <span class="panel-subtitle" id="distrib-cnt-XAU">0 pts</span>
+      </div>
+      <canvas class="distrib" id="distrib-XAU"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:var(--cyan)">WTI Distribution</span>
+        <span class="panel-subtitle" id="distrib-cnt-WTI">0 pts</span>
+      </div>
+      <canvas class="distrib" id="distrib-WTI"></canvas>
+    </div>
+  </div>
+
   <!-- Bottom: sparklines + alerts -->
   <div class="bottom-area">
     <div class="spark-panel">
@@ -462,6 +511,11 @@ const alerts = [];
 const sparkHist = {}; // coin -> [{ts, entries: [{pair, dev}]}]
 COINS.forEach(c => sparkHist[c] = []);
 const SPARK_MAX = 600;
+
+// Distribution scatter data: coin -> [{dev, dur, pair, ts}]
+const distribData = {};
+COINS.forEach(c => distribData[c] = []);
+const DISTRIB_MAX = 500;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MATH
@@ -737,7 +791,9 @@ function compute() {
         if (st.devStart !== null && st.devSign !== 0) {
           const dur = now - st.devStart;
           if (dur >= CONFIRM_MS) {
-            addAlert(coin, ex1, ex2, st.devSign > 0 ? st.maxPos : st.maxNeg, dur);
+            const peak = st.devSign > 0 ? st.maxPos : st.maxNeg;
+            addAlert(coin, ex1, ex2, peak, dur);
+            addDistribPoint(coin, ex1, ex2, peak, dur);
           }
         }
         st.devStart = null;
@@ -875,6 +931,138 @@ function renderAlerts() {
   }).join('');
 }
 
+// ─── Distribution Scatter ────────────────────────────────────────────────────
+
+function addDistribPoint(coin, ex1, ex2, dev, dur) {
+  const pair = `${EX_SHORT[ex1]}-${EX_SHORT[ex2]}`;
+  distribData[coin].push({ dev, dur, pair, ts: Date.now() });
+  if (distribData[coin].length > DISTRIB_MAX) distribData[coin].shift();
+}
+
+function drawDistrib(coin) {
+  const canvas = document.getElementById(`distrib-${coin}`);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+
+  const w = rect.width, h = rect.height;
+  const pts = distribData[coin];
+
+  document.getElementById(`distrib-cnt-${coin}`).textContent = `${pts.length} pts`;
+
+  ctx.clearRect(0, 0, w, h);
+
+  if (pts.length < 1) {
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Collecting deviation data…', w / 2, h / 2);
+    return;
+  }
+
+  const pairColors = { 'HL-LT': '#00ff88', 'HL-EX': '#ff3355', 'LT-EX': '#58a6ff' };
+  const margin = { top: 16, right: 10, bottom: 22, left: 42 };
+  const pw = w - margin.left - margin.right;
+  const ph = h - margin.top - margin.bottom;
+
+  // Ranges
+  let devMin = 0, devMax = 0, durMax = 0;
+  pts.forEach(p => {
+    if (p.dev < devMin) devMin = p.dev;
+    if (p.dev > devMax) devMax = p.dev;
+    if (p.dur > durMax) durMax = p.dur;
+  });
+  const devPad = Math.max((devMax - devMin) * 0.15, 3);
+  devMin -= devPad; devMax += devPad;
+  durMax = Math.max(durMax * 1.15, 2000);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 0.5;
+  ctx.setLineDash([2, 3]);
+  for (let i = 0; i <= 4; i++) {
+    const y = margin.top + (i / 4) * ph;
+    ctx.beginPath(); ctx.moveTo(margin.left, y); ctx.lineTo(w - margin.right, y); ctx.stroke();
+  }
+  for (let i = 0; i <= 4; i++) {
+    const x = margin.left + (i / 4) * pw;
+    ctx.beginPath(); ctx.moveTo(x, margin.top); ctx.lineTo(x, h - margin.bottom); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Zero line (x=0)
+  const zeroX = margin.left + ((0 - devMin) / (devMax - devMin)) * pw;
+  if (zeroX > margin.left && zeroX < w - margin.right) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(zeroX, margin.top); ctx.lineTo(zeroX, h - margin.bottom); ctx.stroke();
+  }
+
+  // Plot points
+  pts.forEach(p => {
+    const x = margin.left + ((p.dev - devMin) / (devMax - devMin)) * pw;
+    const y = margin.top + ph - ((p.dur / durMax) * ph);
+    const color = pairColors[p.pair] || '#ffffff';
+
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Glow for long-lasting deviations
+    if (p.dur > 5000) {
+      ctx.globalAlpha = 0.15;
+      ctx.beginPath();
+      ctx.arc(x, y, 6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  });
+
+  // Axis labels
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.font = '8px JetBrains Mono, monospace';
+
+  // X axis (deviation)
+  ctx.textAlign = 'center';
+  for (let i = 0; i <= 4; i++) {
+    const v = devMin + (i / 4) * (devMax - devMin);
+    const x = margin.left + (i / 4) * pw;
+    ctx.fillText(v.toFixed(0), x, h - 4);
+  }
+
+  // Y axis (duration)
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const v = (i / 4) * durMax / 1000;
+    const y = margin.top + ph - (i / 4) * ph;
+    ctx.fillText(v.toFixed(1) + 's', margin.left - 4, y + 3);
+  }
+
+  // Axis titles
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.font = '8px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('deviation (dB)', margin.left + pw / 2, h - margin.bottom + 18);
+
+  // Legend
+  ctx.font = '8px JetBrains Mono, monospace';
+  let lx = margin.left;
+  Object.entries(pairColors).forEach(([pair, color]) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(lx, 3, 6, 6);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.textAlign = 'left';
+    ctx.fillText(pair, lx + 9, 9);
+    lx += 55;
+  });
+}
+
 // ─── Sparklines ──────────────────────────────────────────────────────────────
 
 function updateSparkData(data) {
@@ -995,6 +1183,7 @@ function tick() {
   renderSpreads(data);
   updateSparkData(data);
   COINS.forEach(drawSpark);
+  if (ticks % 4 === 0) COINS.forEach(drawDistrib); // redraw every ~1s
   renderAlerts();
 
   document.getElementById('clock').textContent = new Date().toLocaleTimeString('en', { hour12: false });
@@ -1009,7 +1198,7 @@ function resetAll() {
     st.ewmaTs = null;
   });
   alerts.length = 0;
-  COINS.forEach(c => sparkHist[c] = []);
+  COINS.forEach(c => { sparkHist[c] = []; distribData[c] = []; });
   ticks = 0;
 }
 
