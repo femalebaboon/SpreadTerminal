@@ -1042,19 +1042,19 @@ function drawDistrib(coin) {
   binMax = Math.max(binMax, 3);
   const binCount = binMax - binMin + 1;
 
-  // Find max ms across all pairs to normalize: peak = 3
+  // Find max ms across all pairs
   let maxMs = 0;
   pairEntries.forEach(([, hist]) => {
     hist.bins.forEach(v => { if (v > maxMs) maxMs = v; });
   });
-  const Y_MAX = 3;
+  maxMs = Math.max(maxMs, 1000); // at least 1s
 
   // Grid
   ctx.strokeStyle = 'rgba(255,255,255,0.06)';
   ctx.lineWidth = 0.5;
   ctx.setLineDash([2, 3]);
-  for (let i = 0; i <= 3; i++) {
-    const y = margin.top + ph - (i / Y_MAX) * ph;
+  for (let i = 0; i <= 4; i++) {
+    const y = margin.top + ph - (i / 4) * ph;
     ctx.beginPath(); ctx.moveTo(margin.left, y); ctx.lineTo(w - margin.right, y); ctx.stroke();
   }
   const gridStep = Math.max(1, Math.ceil(binCount / 10));
@@ -1083,9 +1083,9 @@ function drawDistrib(coin) {
     let first = true;
     for (let bin = binMin; bin <= binMax; bin++) {
       const t = hist.bins.get(bin) || 0;
-      const relTime = maxMs > 0 ? (t / maxMs) * Y_MAX : 0;
+      const norm = maxMs > 0 ? t / maxMs : 0;
       const x = margin.left + ((bin - binMin + 0.5) / binCount) * pw;
-      const y = margin.top + ph - Math.min(relTime / Y_MAX, 1) * ph;
+      const y = margin.top + ph - Math.min(norm, 1) * ph;
       if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
     }
     ctx.stroke();
@@ -1100,13 +1100,15 @@ function drawDistrib(coin) {
     ctx.globalAlpha = 1;
   });
 
-  // Y axis labels
+  // Y axis labels (absolute time)
   ctx.fillStyle = 'rgba(255,255,255,0.3)';
   ctx.font = '8px JetBrains Mono, monospace';
   ctx.textAlign = 'right';
-  for (let i = 0; i <= 3; i++) {
-    const y = margin.top + ph - (i / Y_MAX) * ph;
-    ctx.fillText(i.toString(), margin.left - 4, y + 3);
+  for (let i = 0; i <= 4; i++) {
+    const y = margin.top + ph - (i / 4) * ph;
+    const val = (maxMs / 1000) * (i / 4);
+    const label = val >= 60 ? (val / 60).toFixed(1) + 'm' : val.toFixed(0) + 's';
+    ctx.fillText(label, margin.left - 4, y + 3);
   }
 
   // X axis labels (deviation in dB)
