@@ -279,20 +279,21 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 1px;
     background: var(--border);
-    overflow: hidden;
   }
 
   .distrib-panel {
     background: var(--panel);
-    padding: 6px 10px;
+    padding: 6px 10px 4px;
     display: flex;
     flex-direction: column;
+    min-height: 0;
   }
 
   canvas.distrib {
     width: 100%;
     flex: 1;
     display: block;
+    min-height: 120px;
   }
 
   /* ─── Sparklines + Alerts ─── */
