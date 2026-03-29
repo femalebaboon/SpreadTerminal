@@ -1042,8 +1042,11 @@ function drawDistrib(coin) {
   binMax = Math.max(binMax, 3);
   const binCount = binMax - binMin + 1;
 
-  // Compute normalized values: relative time = (timeInBin / totalTime) * binCount
-  // This makes the average height = 1, so Y scale 0..3 shows the shape well
+  // Find max ms across all pairs to normalize: peak = 3
+  let maxMs = 0;
+  pairEntries.forEach(([, hist]) => {
+    hist.bins.forEach(v => { if (v > maxMs) maxMs = v; });
+  });
   const Y_MAX = 3;
 
   // Grid
@@ -1075,7 +1078,7 @@ function drawDistrib(coin) {
     let first = true;
     for (let bin = binMin; bin <= binMax; bin++) {
       const t = hist.bins.get(bin) || 0;
-      const relTime = hist.totalTime > 0 ? (t / hist.totalTime) * binCount : 0;
+      const relTime = maxMs > 0 ? (t / maxMs) * Y_MAX : 0;
       const x = margin.left + ((bin - binMin + 0.5) / binCount) * pw;
       const y = margin.top + ph - Math.min(relTime / Y_MAX, 1) * ph;
       if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
