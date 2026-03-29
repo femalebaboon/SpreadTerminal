@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPREAD TERMINAL</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0e14;
+    --panel: #0d1117;
+    --border: #1a2332;
+    --text: #c9d1d9;
+    --dim: #484f58;
+    --accent: #ff8c00;
+    --green: #00ff88;
+    --red: #ff3355;
+    --blue: #58a6ff;
+    --yellow: #ffd700;
+    --cyan: #00d4ff;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    overflow: hidden;
+    height: 100vh;
+    user-select: none;
+  }
+
+  /* ─── Top Bar ─── */
+  .topbar {
+    background: linear-gradient(180deg, #1a1f2e, #0d1117);
+    border-bottom: 2px solid var(--accent);
+    padding: 6px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 38px;
+  }
+
+  .topbar-left { display: flex; align-items: center; gap: 16px; }
+
+  .logo {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 3px;
+    text-shadow: 0 0 10px rgba(255,140,0,0.3);
+  }
+
+  .topbar-status { display: flex; gap: 10px; }
+
+  .exchange-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--red);
+    transition: background 0.3s;
+  }
+  .status-dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-dot.warn { background: var(--yellow); box-shadow: 0 0 4px var(--yellow); }
+
+  .topbar-right { display: flex; align-items: center; gap: 16px; color: var(--dim); font-size: 11px; }
+  .clock { color: var(--accent); font-weight: 500; font-size: 13px; }
+
+  .btn {
+    background: rgba(255,140,0,0.1);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 3px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: background 0.2s;
+  }
+  .btn:hover { background: rgba(255,140,0,0.3); }
+
+  /* ─── Main Layout ─── */
+  .main {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 1px;
+    background: var(--border);
+    height: calc(100vh - 38px);
+  }
+
+  .panel {
+    background: var(--panel);
+    padding: 8px 12px;
+  }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
+  }
+
+  .panel-title {
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .panel-subtitle { color: var(--dim); font-size: 10px; }
+
+  /* ─── Prices Row ─── */
+  .prices-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .price-card {
+    background: rgba(255,255,255,0.015);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 12px;
+  }
+
+  .price-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .coin-tag {
+    font-weight: 700; font-size: 14px; letter-spacing: 1px;
+  }
+  .coin-tag.btc { color: var(--yellow); }
+  .coin-tag.xau { color: var(--accent); }
+  .coin-tag.wti { color: var(--cyan); }
+
+  .price-grid {
+    display: grid;
+    grid-template-columns: 70px repeat(3, 1fr);
+    gap: 2px 6px;
+    font-size: 11px;
+  }
+
+  .pg-label { color: var(--dim); font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
+  .pg-bid { color: var(--green); }
+  .pg-ask { color: var(--red); }
+  .pg-stale { opacity: 0.25; }
+
+  /* ─── Spreads Grid ─── */
+  .spreads-area {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    overflow: hidden;
+  }
+
+  .coin-panel {
+    background: var(--panel);
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .spread-table {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .sr { /* spread row */
+    display: grid;
+    grid-template-columns: 55px 1fr 60px 60px 60px 60px 46px;
+    gap: 3px;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    align-items: center;
+    font-size: 11px;
+  }
+
+  .sr.hdr {
+    color: var(--dim);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+    z-index: 1;
+  }
+
+  .pair-label { color: var(--blue); font-weight: 600; font-size: 10px; }
+
+  /* Deviation bar */
+  .dbar-wrap {
+    height: 18px;
+    position: relative;
+    background: rgba(255,255,255,0.025);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .dbar-center {
+    position: absolute;
+    left: 50%; top: 0; bottom: 0;
+    width: 1px;
+    background: rgba(255,255,255,0.12);
+  }
+
+  .dbar {
+    position: absolute;
+    top: 1px; bottom: 1px;
+    border-radius: 1px;
+    transition: width 0.15s ease-out;
+    min-width: 1px;
+  }
+
+  .dbar.pos {
+    left: 50%;
+    background: linear-gradient(90deg, rgba(0,255,136,0.25), rgba(0,255,136,0.6));
+  }
+
+  .dbar.neg {
+    right: 50%;
+    background: linear-gradient(270deg, rgba(255,51,85,0.25), rgba(255,51,85,0.6));
+  }
+
+  .v-pos { color: var(--green); }
+  .v-neg { color: var(--red); }
+  .v-dim { color: var(--dim); }
+
+  .dur {
+    font-size: 9px;
+    padding: 1px 4px;
+    border-radius: 2px;
+    text-align: center;
+  }
+  .dur.hot {
+    background: rgba(255,140,0,0.2);
+    color: var(--accent);
+    border: 1px solid rgba(255,140,0,0.4);
+    animation: pulse 1s ease-in-out infinite;
+  }
+  .dur.cold { color: var(--dim); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  /* ─── Sparklines + Alerts ─── */
+  .bottom-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1.2fr;
+    gap: 1px;
+    background: var(--border);
+    max-height: 180px;
+  }
+
+  .spark-panel {
+    background: var(--panel);
+    padding: 6px 10px;
+  }
+
+  .spark-head {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .spark-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  canvas.spark {
+    width: 100%;
+    height: 90px;
+    display: block;
+  }
+
+  .alert-panel {
+    background: var(--panel);
+    padding: 6px 10px;
+    overflow-y: auto;
+  }
+
+  .alert-row {
+    display: flex;
+    gap: 8px;
+    padding: 2px 0;
+    font-size: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.02);
+  }
+
+  .a-time { color: var(--dim); min-width: 65px; }
+  .a-coin { font-weight: 700; min-width: 32px; }
+  .a-pair { color: var(--blue); min-width: 50px; }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="logo">SPREAD TERMINAL</span>
+    <div class="topbar-status" id="exStatus"></div>
+  </div>
+  <div class="topbar-right">
+    <span id="stats">—</span>
+    <button class="btn" onclick="resetAll()">RESET</button>
+    <span class="clock" id="clock">--:--:--</span>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Prices -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Live Prices</span>
+      <span class="panel-subtitle">best bid / ask · dB = (ln(b/a))·111111</span>
+    </div>
+    <div class="prices-row" id="pricesRow"></div>
+  </div>
+
+  <!-- Spreads -->
+  <div class="spreads-area">
+    <div class="coin-panel" id="cp-BTC">
+      <div class="panel-header">
+        <span class="panel-title" style="color:var(--yellow)">BTC</span>
+        <span class="panel-subtitle">cross-exchange deviation (dB)</span>
+      </div>
+      <div class="spread-table" id="st-BTC"></div>
+    </div>
+    <div class="coin-panel" id="cp-XAU">
+      <div class="panel-header">
+        <span class="panel-title" style="color:var(--accent)">XAU</span>
+        <span class="panel-subtitle">cross-exchange deviation (dB)</span>
+      </div>
+      <div class="spread-table" id="st-XAU"></div>
+    </div>
+    <div class="coin-panel" id="cp-WTI">
+      <div class="panel-header">
+        <span class="panel-title" style="color:var(--cyan)">WTI</span>
+        <span class="panel-subtitle">cross-exchange deviation (dB)</span>
+      </div>
+      <div class="spread-table" id="st-WTI"></div>
+    </div>
+  </div>
+
+  <!-- Bottom: sparklines + alerts -->
+  <div class="bottom-area">
+    <div class="spark-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:var(--yellow)">BTC History</span>
+      </div>
+      <canvas class="spark" id="spark-BTC"></canvas>
+    </div>
+    <div class="spark-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:var(--accent)">XAU History</span>
+      </div>
+      <canvas class="spark" id="spark-XAU"></canvas>
+    </div>
+    <div class="spark-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:var(--cyan)">WTI History</span>
+      </div>
+      <canvas class="spark" id="spark-WTI"></canvas>
+    </div>
+    <div class="alert-panel">
+      <div class="panel-header">
+        <span class="panel-title">Alerts >800ms</span>
+        <span class="panel-subtitle" id="alertCnt">0</span>
+      </div>
+      <div id="alertLog"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const COINS = ['BTC', 'XAU', 'WTI'];
+const EXCHANGES = ['hyperliquid', 'lighter', 'extended'];
+const EX_LABEL = { hyperliquid: 'HyperLiq', lighter: 'Lighter', extended: 'Extended' };
+const EX_SHORT = { hyperliquid: 'HL', lighter: 'LT', extended: 'EX' };
+
+const COIN_MAP = {
+  BTC: { hyperliquid: 'BTC',       lighter: 1,   extended: 'BTC-USD' },
+  XAU: { hyperliquid: 'xyz:GOLD',  lighter: 92,  extended: 'XAU-USD' },
+  WTI: { hyperliquid: 'xyz:CL',    lighter: 145, extended: 'WTI-USD' },
+};
+
+const EWMA_HALF_LIFE = 1800; // seconds
+const LN2 = 0.6931471805599453;
+const NOISE_FLOOR = 2; // dB
+const CONFIRM_MS = 800;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// orderbooks[ex][coin] = { bid, ask, ts }
+const OB = {};
+EXCHANGES.forEach(ex => {
+  OB[ex] = {};
+  COINS.forEach(c => OB[ex][c] = { bid: null, ask: null, ts: 0 });
+});
+
+const exConnected = { hyperliquid: false, lighter: false, extended: false };
+
+// spread state per pair
+// key: "ex1-ex2:COIN"
+const SS = {};
+const PAIRS = [];
+for (let i = 0; i < EXCHANGES.length; i++)
+  for (let j = i + 1; j < EXCHANGES.length; j++)
+    PAIRS.push([EXCHANGES[i], EXCHANGES[j]]);
+
+COINS.forEach(coin => PAIRS.forEach(([a, b]) => {
+  SS[`${a}-${b}:${coin}`] = {
+    ewma: NaN, ewmaTs: null,
+    dev: 0, spread: 0,
+    maxPos: 0, maxNeg: 0,
+    devStart: null, devSign: 0,
+  };
+}));
+
+const alerts = [];
+const sparkHist = {}; // coin -> [{ts, entries: [{pair, dev}]}]
+COINS.forEach(c => sparkHist[c] = []);
+const SPARK_MAX = 600;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MATH
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function dB(a, b) {
+  if (a <= 0 || b <= 0) return 0;
+  return (Math.log(b) - Math.log(a)) * 111111;
+}
+
+function updateEwma(st, val, ts) {
+  if (!isFinite(val)) return st.ewma || 0;
+  if (st.ewmaTs === null || isNaN(st.ewma)) {
+    st.ewma = val;
+    st.ewmaTs = ts;
+    return val;
+  }
+  const dt = Math.max(1, ts - st.ewmaTs) / 1000;
+  const alpha = Math.min(1, Math.max(1e-9, 1 - Math.exp(-LN2 * dt / EWMA_HALF_LIFE)));
+  st.ewma += alpha * (val - st.ewma);
+  st.ewmaTs = ts;
+  return st.ewma;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EXCHANGE CONNECTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Hyperliquid ─────────────────────────────────────────────────────────────
+
+function connectHyperliquid() {
+  let ws;
+  try {
+    ws = new WebSocket('wss://api.hyperliquid.xyz/ws');
+  } catch (e) {
+    console.error('[HL] Failed to create WebSocket:', e);
+    setTimeout(connectHyperliquid, 5000);
+    return;
+  }
+
+  ws.onopen = () => {
+    console.log('[HL] Connected');
+    exConnected.hyperliquid = true;
+    COINS.forEach(coin => {
+      const sym = COIN_MAP[coin].hyperliquid;
+      ws.send(JSON.stringify({
+        method: 'subscribe',
+        subscription: { type: 'l2Book', coin: sym }
+      }));
+    });
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.channel === 'l2Book' && msg.data) {
+        const sym = msg.data.coin;
+        const coin = COINS.find(c => COIN_MAP[c].hyperliquid === sym);
+        if (!coin) return;
+        const lvls = msg.data.levels;
+        if (lvls && lvls.length >= 2 && lvls[0].length > 0 && lvls[1].length > 0) {
+          OB.hyperliquid[coin] = {
+            bid: parseFloat(lvls[0][0].px),
+            ask: parseFloat(lvls[1][0].px),
+            ts: Date.now(),
+          };
+        }
+      }
+    } catch (_) {}
+  };
+
+  ws.onclose = () => {
+    console.log('[HL] Disconnected');
+    exConnected.hyperliquid = false;
+    setTimeout(connectHyperliquid, 3000);
+  };
+
+  ws.onerror = () => {
+    exConnected.hyperliquid = false;
+  };
+}
+
+// ─── Lighter ─────────────────────────────────────────────────────────────────
+
+function connectLighter() {
+  const books = {};
+  COINS.forEach(c => books[c] = { asks: {}, bids: {} });
+
+  let ws;
+  try {
+    ws = new WebSocket('wss://mainnet.zklighter.elliot.ai/stream');
+  } catch (e) {
+    console.error('[LT] Failed:', e);
+    setTimeout(connectLighter, 5000);
+    return;
+  }
+
+  let pingTimer;
+
+  ws.onopen = () => {
+    console.log('[LT] Connected');
+    exConnected.lighter = true;
+    COINS.forEach(coin => {
+      const idx = COIN_MAP[coin].lighter;
+      ws.send(JSON.stringify({ type: 'subscribe', channel: `order_book/${idx}` }));
+    });
+    pingTimer = setInterval(() => {
+      if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'ping' }));
+    }, 15000);
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'pong') return;
+
+      if (msg.order_book) {
+        // channel format: "order_book:1", "order_book:92", etc.
+        let coin = null;
+        if (msg.channel) {
+          for (const c of COINS) {
+            if (msg.channel === `order_book:${COIN_MAP[c].lighter}`) { coin = c; break; }
+          }
+        }
+        if (!coin) return;
+
+        const ob = msg.order_book;
+        const book = books[coin];
+
+        if (ob.asks) ob.asks.forEach(l => {
+          const sz = parseFloat(l.size);
+          if (sz === 0) delete book.asks[l.price]; else book.asks[l.price] = sz;
+        });
+        if (ob.bids) ob.bids.forEach(l => {
+          const sz = parseFloat(l.size);
+          if (sz === 0) delete book.bids[l.price]; else book.bids[l.price] = sz;
+        });
+
+        const askP = Object.keys(book.asks).map(Number).filter(p => p > 0).sort((a, b) => a - b);
+        const bidP = Object.keys(book.bids).map(Number).filter(p => p > 0).sort((a, b) => b - a);
+
+        if (askP.length > 0 && bidP.length > 0) {
+          OB.lighter[coin] = { bid: bidP[0], ask: askP[0], ts: Date.now() };
+          console.log('[LT]', coin, 'bid:', bidP[0], 'ask:', askP[0]);
+        }
+      }
+    } catch (err) { console.error('[LT] parse error:', err); }
+  };
+
+  ws.onclose = () => {
+    console.log('[LT] Disconnected');
+    exConnected.lighter = false;
+    clearInterval(pingTimer);
+    setTimeout(connectLighter, 3000);
+  };
+
+  ws.onerror = (err) => { console.error('[LT] WS error:', err); exConnected.lighter = false; };
+}
+
+// ─── Extended ────────────────────────────────────────────────────────────────
+
+function connectExtended() {
+  COINS.forEach(coin => connectExtendedCoin(coin));
+}
+
+function connectExtendedCoin(coin) {
+  const sym = COIN_MAP[coin].extended;
+  const url = `wss://api.starknet.extended.exchange/stream.extended.exchange/v1/orderbooks/${sym}`;
+  const book = { asks: {}, bids: {} };
+
+  let ws;
+  try {
+    ws = new WebSocket(url);
+  } catch (e) {
+    console.error(`[EX] ${sym} Failed:`, e);
+    setTimeout(() => connectExtendedCoin(coin), 5000);
+    return;
+  }
+
+  ws.onopen = () => {
+    console.log(`[EX] ${sym} Connected`);
+    exConnected.extended = true;
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      console.log(`[EX] ${sym} raw:`, e.data.slice(0, 200));
+      if (!msg.data) return;
+
+      if (msg.type === 'SNAPSHOT') {
+        book.asks = {};
+        book.bids = {};
+        if (msg.data.a) msg.data.a.forEach(l => {
+          const q = parseFloat(l.q);
+          if (q > 0) book.asks[parseFloat(l.p)] = q;
+        });
+        if (msg.data.b) msg.data.b.forEach(l => {
+          const q = parseFloat(l.q);
+          if (q > 0) book.bids[parseFloat(l.p)] = q;
+        });
+      } else if (msg.type === 'DELTA') {
+        if (msg.data.a) msg.data.a.forEach(l => {
+          const p = parseFloat(l.p);
+          const q = parseFloat(l.c || l.q || '0');
+          if (q === 0) delete book.asks[p]; else book.asks[p] = q;
+        });
+        if (msg.data.b) msg.data.b.forEach(l => {
+          const p = parseFloat(l.p);
+          const q = parseFloat(l.c || l.q || '0');
+          if (q === 0) delete book.bids[p]; else book.bids[p] = q;
+        });
+      }
+
+      const askP = Object.keys(book.asks).map(Number).sort((a, b) => a - b);
+      const bidP = Object.keys(book.bids).map(Number).sort((a, b) => b - a);
+
+      if (askP.length > 0 && bidP.length > 0) {
+        OB.extended[coin] = { bid: bidP[0], ask: askP[0], ts: Date.now() };
+      }
+    } catch (_) {}
+  };
+
+  ws.onclose = (ev) => {
+    console.log(`[EX] ${sym} Disconnected code:${ev.code} reason:${ev.reason}`);
+    // Only mark disconnected if all coins disconnected
+    setTimeout(() => connectExtendedCoin(coin), 3000);
+  };
+
+  ws.onerror = () => {};
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPUTATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function compute() {
+  const now = Date.now();
+  const results = [];
+
+  COINS.forEach(coin => {
+    PAIRS.forEach(([ex1, ex2]) => {
+      const a = OB[ex1][coin], b = OB[ex2][coin];
+      if (!a.bid || !a.ask || !b.bid || !b.ask) return;
+      if (now - a.ts > 5000 || now - b.ts > 5000) return;
+
+      const askSp = dB(a.ask, b.ask);
+      const bidSp = dB(a.bid, b.bid);
+      const spread = (askSp + bidSp) / 2;
+
+      const key = `${ex1}-${ex2}:${coin}`;
+      const st = SS[key];
+      const avrg = updateEwma(st, spread, now);
+      const dev = spread - avrg;
+      st.dev = dev;
+      st.spread = spread;
+
+      // Duration tracking
+      const sign = dev > NOISE_FLOOR ? 1 : dev < -NOISE_FLOOR ? -1 : 0;
+
+      if (sign !== 0) {
+        if (st.devSign === sign && st.devStart !== null) {
+          const dur = now - st.devStart;
+          if (dur >= CONFIRM_MS) {
+            if (dev > st.maxPos) st.maxPos = dev;
+            if (dev < st.maxNeg) st.maxNeg = dev;
+          }
+        } else {
+          st.devStart = now;
+          st.devSign = sign;
+        }
+      } else {
+        if (st.devStart !== null && st.devSign !== 0) {
+          const dur = now - st.devStart;
+          if (dur >= CONFIRM_MS) {
+            addAlert(coin, ex1, ex2, st.devSign > 0 ? st.maxPos : st.maxNeg, dur);
+          }
+        }
+        st.devStart = null;
+        st.devSign = 0;
+      }
+
+      const devDur = (st.devStart && st.devSign !== 0) ? now - st.devStart : 0;
+
+      results.push({
+        coin, ex1, ex2, spread, avrg, dev, devDur,
+        confirmed: devDur >= CONFIRM_MS,
+        maxPos: st.maxPos, maxNeg: st.maxNeg,
+      });
+    });
+  });
+
+  return results;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function addAlert(coin, ex1, ex2, peak, dur) {
+  const key = `${coin}:${ex1}-${ex2}`;
+  // Dedup within 3s
+  if (alerts.length > 0) {
+    const last = alerts[alerts.length - 1];
+    if (last.key === key && Date.now() - last.ts < 3000) return;
+  }
+  alerts.push({ ts: Date.now(), key, coin, ex1, ex2, peak, dur });
+  if (alerts.length > 200) alerts.shift();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RENDERING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function fmtPrice(v, coin) {
+  if (!v) return '—';
+  if (coin === 'BTC') return v.toLocaleString('en', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  return v.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function renderStatus() {
+  document.getElementById('exStatus').innerHTML = EXCHANGES.map(ex => {
+    const ok = exConnected[ex];
+    // Check if we have recent data
+    const hasData = COINS.some(c => OB[ex][c].bid && Date.now() - OB[ex][c].ts < 5000);
+    const cls = ok && hasData ? 'ok' : ok ? 'warn' : '';
+    return `<div class="exchange-badge"><span class="status-dot ${cls}"></span>${EX_LABEL[ex]}</div>`;
+  }).join('');
+}
+
+function renderPrices() {
+  const now = Date.now();
+  document.getElementById('pricesRow').innerHTML = COINS.map(coin => {
+    const cls = coin.toLowerCase();
+    return `<div class="price-card">
+      <div class="price-card-head"><span class="coin-tag ${cls}">${coin}</span></div>
+      <div class="price-grid">
+        <div></div>${EXCHANGES.map(ex => `<div class="pg-label">${EX_SHORT[ex]}</div>`).join('')}
+        <div class="pg-label">Bid</div>${EXCHANGES.map(ex => {
+          const o = OB[ex][coin];
+          const stale = !o.bid || now - o.ts > 5000;
+          return `<div class="pg-bid ${stale ? 'pg-stale' : ''}">${fmtPrice(o.bid, coin)}</div>`;
+        }).join('')}
+        <div class="pg-label">Ask</div>${EXCHANGES.map(ex => {
+          const o = OB[ex][coin];
+          const stale = !o.ask || now - o.ts > 5000;
+          return `<div class="pg-ask ${stale ? 'pg-stale' : ''}">${fmtPrice(o.ask, coin)}</div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderSpreads(data) {
+  const byCoin = {};
+  COINS.forEach(c => byCoin[c] = []);
+  data.forEach(d => byCoin[d.coin]?.push(d));
+
+  COINS.forEach(coin => {
+    const el = document.getElementById(`st-${coin}`);
+    const rows = byCoin[coin];
+
+    let html = `<div class="sr hdr">
+      <span>PAIR</span><span>DEVIATION</span><span>DEV</span><span>SPRD</span><span>MAX+</span><span>MAX−</span><span>DUR</span>
+    </div>`;
+
+    if (rows.length === 0) {
+      html += `<div style="padding:16px;color:var(--dim);text-align:center;font-size:10px;">Waiting for data…</div>`;
+    }
+
+    rows.forEach(d => {
+      const dcls = d.dev > 0 ? 'v-pos' : d.dev < 0 ? 'v-neg' : 'v-dim';
+      const bw = Math.min(48, Math.abs(d.dev) * 1.5);
+      const bdir = d.dev >= 0 ? 'pos' : 'neg';
+      const bstyle = d.dev >= 0
+        ? `left:50%;width:${bw}%`
+        : `right:50%;width:${bw}%;left:auto`;
+      const durTxt = d.devDur > 0 ? `${(d.devDur / 1000).toFixed(1)}s` : '';
+      const durCls = d.confirmed ? 'hot' : 'cold';
+      const sign = d.dev > 0 ? '+' : '';
+
+      html += `<div class="sr">
+        <span class="pair-label">${EX_SHORT[d.ex1]}—${EX_SHORT[d.ex2]}</span>
+        <div class="dbar-wrap"><div class="dbar-center"></div><div class="dbar ${bdir}" style="${bstyle}"></div></div>
+        <span class="${dcls}">${sign}${d.dev.toFixed(1)}</span>
+        <span class="v-dim">${d.spread.toFixed(1)}</span>
+        <span class="v-pos">${d.maxPos > 0 ? '+' + d.maxPos.toFixed(1) : '—'}</span>
+        <span class="v-neg">${d.maxNeg < 0 ? d.maxNeg.toFixed(1) : '—'}</span>
+        <span class="dur ${durCls}">${durTxt}</span>
+      </div>`;
+    });
+
+    el.innerHTML = html;
+  });
+}
+
+function renderAlerts() {
+  document.getElementById('alertCnt').textContent = `${alerts.length}`;
+  const el = document.getElementById('alertLog');
+  el.innerHTML = alerts.slice(-50).reverse().map(a => {
+    const t = new Date(a.ts).toLocaleTimeString('en', { hour12: false });
+    const cc = a.coin === 'BTC' ? 'color:var(--yellow)' : a.coin === 'XAU' ? 'color:var(--accent)' : 'color:var(--cyan)';
+    const vc = a.peak > 0 ? 'v-pos' : 'v-neg';
+    return `<div class="alert-row">
+      <span class="a-time">${t}</span>
+      <span class="a-coin" style="${cc}">${a.coin}</span>
+      <span class="a-pair">${EX_SHORT[a.ex1]}—${EX_SHORT[a.ex2]}</span>
+      <span class="${vc}">${a.peak > 0 ? '+' : ''}${a.peak.toFixed(1)} dB</span>
+      <span class="v-dim">${(a.dur / 1000).toFixed(1)}s</span>
+    </div>`;
+  }).join('');
+}
+
+// ─── Sparklines ──────────────────────────────────────────────────────────────
+
+function updateSparkData(data) {
+  const now = Date.now();
+  COINS.forEach(coin => {
+    const entries = data.filter(d => d.coin === coin).map(d => ({
+      pair: `${EX_SHORT[d.ex1]}-${EX_SHORT[d.ex2]}`,
+      val: d.dev,
+    }));
+    if (entries.length > 0) {
+      sparkHist[coin].push({ ts: now, entries });
+      if (sparkHist[coin].length > SPARK_MAX) sparkHist[coin].shift();
+    }
+  });
+}
+
+function drawSpark(coin) {
+  const canvas = document.getElementById(`spark-${coin}`);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+
+  const w = rect.width, h = rect.height;
+  const hist = sparkHist[coin];
+  ctx.clearRect(0, 0, w, h);
+
+  if (hist.length < 2) {
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Collecting data…', w / 2, h / 2);
+    return;
+  }
+
+  // Gather pairs
+  const pairSet = new Set();
+  hist.forEach(pt => pt.entries.forEach(e => pairSet.add(e.pair)));
+  const pairs = [...pairSet];
+  const colors = ['#00ff88', '#ff3355', '#58a6ff'];
+
+  // Range
+  let lo = 0, hi = 0;
+  hist.forEach(pt => pt.entries.forEach(e => {
+    if (e.val < lo) lo = e.val;
+    if (e.val > hi) hi = e.val;
+  }));
+  const pad = Math.max((hi - lo) * 0.15, 3);
+  lo -= pad; hi += pad;
+
+  // Zero line
+  const zy = h - ((0 - lo) / (hi - lo)) * h;
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 0.5;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(0, zy); ctx.lineTo(w, zy); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Threshold lines
+  [NOISE_FLOOR, -NOISE_FLOOR].forEach(thr => {
+    const ty = h - ((thr - lo) / (hi - lo)) * h;
+    ctx.strokeStyle = 'rgba(255,140,0,0.12)';
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([2, 4]);
+    ctx.beginPath(); ctx.moveTo(0, ty); ctx.lineTo(w, ty); ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // Lines
+  pairs.forEach((pair, idx) => {
+    ctx.strokeStyle = colors[idx % colors.length];
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    let first = true;
+    hist.forEach((pt, i) => {
+      const e = pt.entries.find(ee => ee.pair === pair);
+      if (!e) return;
+      const x = (i / (hist.length - 1)) * w;
+      const y = h - ((e.val - lo) / (hi - lo)) * h;
+      if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  });
+
+  // Legend
+  ctx.font = '9px JetBrains Mono, monospace';
+  pairs.forEach((pair, idx) => {
+    const x = 4 + idx * 58;
+    ctx.fillStyle = colors[idx % colors.length];
+    ctx.fillRect(x, 3, 8, 8);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.textAlign = 'left';
+    ctx.fillText(pair, x + 11, 10);
+  });
+
+  // Scale
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.font = '8px JetBrains Mono, monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(hi.toFixed(0), w - 2, 10);
+  ctx.fillText(lo.toFixed(0), w - 2, h - 2);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN LOOP
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let ticks = 0;
+
+function tick() {
+  ticks++;
+  const data = compute();
+  renderStatus();
+  renderPrices();
+  renderSpreads(data);
+  updateSparkData(data);
+  COINS.forEach(drawSpark);
+  renderAlerts();
+
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('en', { hour12: false });
+  document.getElementById('stats').textContent = `tick #${ticks}`;
+}
+
+function resetAll() {
+  Object.values(SS).forEach(st => {
+    st.maxPos = 0;
+    st.maxNeg = 0;
+    st.ewma = NaN;
+    st.ewmaTs = null;
+  });
+  alerts.length = 0;
+  COINS.forEach(c => sparkHist[c] = []);
+  ticks = 0;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+connectHyperliquid();
+connectLighter();
+connectExtended();
+
+setInterval(tick, 250);
+</script>
+</body>
+</html>
