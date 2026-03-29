@@ -514,13 +514,52 @@ const SPARK_MAX = 600;
 // Distribution histogram: coin -> pair -> {bins: Map<binIndex, timeMs>, totalTime}
 const distribData = {};
 const DISTRIB_BIN_SIZE = 1; // 1 dB per bin
-COINS.forEach(c => {
-  distribData[c] = {};
-  PAIRS.forEach(([a, b]) => {
-    const pair = `${EX_SHORT[a]}-${EX_SHORT[b]}`;
-    distribData[c][pair] = { bins: new Map(), totalTime: 0 };
+const DISTRIB_STORAGE_KEY = 'spreadTerminal_distrib';
+const DISTRIB_SAVE_INTERVAL = 5000; // save every 5s
+
+function initDistribData() {
+  COINS.forEach(c => {
+    distribData[c] = {};
+    PAIRS.forEach(([a, b]) => {
+      const pair = `${EX_SHORT[a]}-${EX_SHORT[b]}`;
+      distribData[c][pair] = { bins: new Map(), totalTime: 0 };
+    });
   });
-});
+}
+
+function saveDistrib() {
+  const out = {};
+  COINS.forEach(c => {
+    out[c] = {};
+    Object.entries(distribData[c]).forEach(([pair, hist]) => {
+      out[c][pair] = {
+        bins: Object.fromEntries(hist.bins),
+        totalTime: hist.totalTime,
+      };
+    });
+  });
+  try { localStorage.setItem(DISTRIB_STORAGE_KEY, JSON.stringify(out)); } catch (_) {}
+}
+
+function loadDistrib() {
+  try {
+    const raw = localStorage.getItem(DISTRIB_STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    COINS.forEach(c => {
+      if (!saved[c]) return;
+      Object.entries(saved[c]).forEach(([pair, data]) => {
+        if (!distribData[c][pair]) return;
+        distribData[c][pair].totalTime = data.totalTime || 0;
+        distribData[c][pair].bins = new Map(Object.entries(data.bins).map(([k, v]) => [Number(k), v]));
+      });
+    });
+    console.log('[Distrib] Restored from localStorage');
+  } catch (_) {}
+}
+
+initDistribData();
+loadDistrib();
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MATH
@@ -937,8 +976,12 @@ function renderAlerts() {
 
 // ─── Distribution Histogram ──────────────────────────────────────────────────
 
+let lastTickTime = Date.now();
+
 function updateDistrib(data) {
-  const dt = 250; // tick interval ms
+  const now = Date.now();
+  const dt = Math.min(now - lastTickTime, 2000); // cap at 2s to avoid huge jumps
+  lastTickTime = now;
   data.forEach(d => {
     const pair = `${EX_SHORT[d.ex1]}-${EX_SHORT[d.ex2]}`;
     const hist = distribData[d.coin][pair];
@@ -1224,6 +1267,7 @@ function resetAll() {
   COINS.forEach(c => {
     sparkHist[c] = [];
     Object.values(distribData[c]).forEach(h => { h.bins.clear(); h.totalTime = 0; });
+    try { localStorage.removeItem(DISTRIB_STORAGE_KEY); } catch (_) {}
   });
   ticks = 0;
 }
@@ -1237,6 +1281,8 @@ connectLighter();
 connectExtended();
 
 setInterval(tick, 250);
+setInterval(saveDistrib, DISTRIB_SAVE_INTERVAL);
+window.addEventListener('beforeunload', saveDistrib);
 </script>
 </body>
 </html>
