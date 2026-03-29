@@ -1111,11 +1111,20 @@ function drawDistrib(coin) {
   }
 
   // X axis labels (deviation in dB)
-  ctx.fillStyle = 'rgba(255,255,255,0.45)';
   ctx.font = '9px JetBrains Mono, monospace';
   ctx.textAlign = 'center';
   const step = Math.max(1, Math.ceil(binCount / 10));
+  const drawnBins = new Set();
+  // Always draw 0 first
+  if (binMin <= 0 && binMax >= 0) {
+    const x0 = margin.left + ((0 - binMin + 0.5) / binCount) * pw;
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillText('0', x0, h - margin.bottom + 12);
+    drawnBins.add(0);
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
   for (let bin = binMin; bin <= binMax; bin += step) {
+    if (drawnBins.has(bin)) continue;
     const x = margin.left + ((bin - binMin + 0.5) / binCount) * pw;
     const val = bin * DISTRIB_BIN_SIZE;
     ctx.fillText((val > 0 ? '+' : '') + val.toFixed(0), x, h - margin.bottom + 12);
