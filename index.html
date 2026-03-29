@@ -497,14 +497,52 @@ for (let i = 0; i < EXCHANGES.length; i++)
   for (let j = i + 1; j < EXCHANGES.length; j++)
     PAIRS.push([EXCHANGES[i], EXCHANGES[j]]);
 
+const EWMA_STORAGE_KEY = 'spreadTerminal_ewma';
+const EWMA_FRESHNESS_MS = 10 * 60 * 1000; // 10 minutes
+const WARMUP_MS = 30 * 60 * 1000; // 30 minutes
+
 COINS.forEach(coin => PAIRS.forEach(([a, b]) => {
   SS[`${a}-${b}:${coin}`] = {
     ewma: NaN, ewmaTs: null,
     dev: 0, spread: 0,
     maxPos: 0, maxNeg: 0,
     devStart: null, devSign: 0,
+    warmedUp: false,
+    firstDataTs: null,
   };
 }));
+
+// Restore EWMA from localStorage if fresh
+function loadEwma() {
+  try {
+    const raw = localStorage.getItem(EWMA_STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    const now = Date.now();
+    Object.entries(saved).forEach(([key, data]) => {
+      if (!SS[key]) return;
+      if (now - data.ewmaTs < EWMA_FRESHNESS_MS) {
+        SS[key].ewma = data.ewma;
+        SS[key].ewmaTs = data.ewmaTs;
+        SS[key].warmedUp = true;
+        SS[key].firstDataTs = data.firstDataTs || data.ewmaTs;
+      }
+    });
+    console.log('[EWMA] Restored from localStorage');
+  } catch (_) {}
+}
+
+function saveEwma() {
+  const out = {};
+  Object.entries(SS).forEach(([key, st]) => {
+    if (!isNaN(st.ewma) && st.ewmaTs) {
+      out[key] = { ewma: st.ewma, ewmaTs: st.ewmaTs, firstDataTs: st.firstDataTs };
+    }
+  });
+  try { localStorage.setItem(EWMA_STORAGE_KEY, JSON.stringify(out)); } catch (_) {}
+}
+
+loadEwma();
 
 const alerts = [];
 const sparkHist = {}; // coin -> [{ts, entries: [{pair, dev}]}]
@@ -812,10 +850,18 @@ function compute() {
 
       const key = `${ex1}-${ex2}:${coin}`;
       const st = SS[key];
+      if (!st.firstDataTs) st.firstDataTs = now;
       const avrg = updateEwma(st, spread, now);
       const dev = spread - avrg;
       st.dev = dev;
       st.spread = spread;
+
+      // Check warmup: need 30 min of data unless restored from fresh localStorage
+      if (!st.warmedUp) {
+        if (now - st.firstDataTs >= WARMUP_MS) {
+          st.warmedUp = true;
+        }
+      }
 
       // Duration tracking
       const sign = dev > NOISE_FLOOR ? 1 : dev < -NOISE_FLOOR ? -1 : 0;
@@ -849,6 +895,7 @@ function compute() {
         coin, ex1, ex2, spread, avrg, dev, devDur,
         confirmed: devDur >= CONFIRM_MS,
         maxPos: st.maxPos, maxNeg: st.maxNeg,
+        warmedUp: st.warmedUp,
       });
     });
   });
@@ -983,6 +1030,7 @@ function updateDistrib(data) {
   const dt = Math.min(now - lastTickTime, 2000); // cap at 2s to avoid huge jumps
   lastTickTime = now;
   data.forEach(d => {
+    if (!d.warmedUp) return; // skip until EWMA is stable
     const pair = `${EX_SHORT[d.ex1]}-${EX_SHORT[d.ex2]}`;
     const hist = distribData[d.coin][pair];
     if (!hist) return;
@@ -1275,7 +1323,17 @@ function tick() {
   renderAlerts();
 
   document.getElementById('clock').textContent = new Date().toLocaleTimeString('en', { hour12: false });
-  document.getElementById('stats').textContent = `tick #${ticks}`;
+
+  // Warmup status
+  const allWarmed = Object.values(SS).every(st => st.warmedUp || st.firstDataTs === null);
+  if (allWarmed) {
+    document.getElementById('stats').textContent = `tick #${ticks}`;
+  } else {
+    const minFirst = Math.min(...Object.values(SS).filter(st => st.firstDataTs && !st.warmedUp).map(st => st.firstDataTs));
+    const elapsed = Date.now() - minFirst;
+    const remaining = Math.max(0, Math.ceil((WARMUP_MS - elapsed) / 60000));
+    document.getElementById('stats').textContent = `WARMING UP · ${remaining}m left`;
+  }
 }
 
 function resetAll() {
@@ -1284,7 +1342,10 @@ function resetAll() {
     st.maxNeg = 0;
     st.ewma = NaN;
     st.ewmaTs = null;
+    st.warmedUp = false;
+    st.firstDataTs = null;
   });
+  try { localStorage.removeItem(EWMA_STORAGE_KEY); } catch (_) {}
   alerts.length = 0;
   COINS.forEach(c => {
     sparkHist[c] = [];
@@ -1303,8 +1364,8 @@ connectLighter();
 connectExtended();
 
 setInterval(tick, 250);
-setInterval(saveDistrib, DISTRIB_SAVE_INTERVAL);
-window.addEventListener('beforeunload', saveDistrib);
+setInterval(() => { saveDistrib(); saveEwma(); }, DISTRIB_SAVE_INTERVAL);
+window.addEventListener('beforeunload', () => { saveDistrib(); saveEwma(); });
 </script>
 </body>
 </html>
