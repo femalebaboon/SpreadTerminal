@@ -298,7 +298,7 @@
   /* ─── Sparklines + Alerts ─── */
   .bottom-area {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1.2fr;
+    grid-template-columns: 1fr 1fr 1fr 0.9fr 0.9fr;
     gap: 1px;
     background: var(--border);
     height: 100%;
@@ -345,6 +345,34 @@
   .a-time { color: var(--dim); min-width: 65px; }
   .a-coin { font-weight: 700; min-width: 32px; }
   .a-pair { color: var(--blue); min-width: 50px; }
+
+  .cumavg-panel {
+    background: var(--panel);
+    padding: 6px 10px;
+    overflow-y: auto;
+  }
+
+  .ca-row {
+    display: grid;
+    grid-template-columns: 32px 50px 54px 36px;
+    gap: 3px;
+    padding: 2px 0;
+    font-size: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.02);
+    align-items: center;
+  }
+
+  .ca-row.ca-hdr {
+    color: var(--dim);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 4px;
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+  }
 
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -452,6 +480,13 @@
       </div>
       <div id="alertLog"></div>
     </div>
+    <div class="cumavg-panel">
+      <div class="panel-header">
+        <span class="panel-title">True Average</span>
+        <span class="panel-subtitle" id="cumavgCnt">0 pts</span>
+      </div>
+      <div id="cumavgLog"></div>
+    </div>
   </div>
 </div>
 
@@ -554,6 +589,30 @@ const distribData = {};
 const DISTRIB_BIN_SIZE = 1; // 1 dB per bin
 const DISTRIB_STORAGE_KEY = 'spreadTerminal_distrib';
 const DISTRIB_SAVE_INTERVAL = 5000; // save every 5s
+
+// ─── Cumulative True Average ──────────────────────────────────────────────────
+const CUMAVG_STORAGE_KEY = 'spreadTerminal_cumavg';
+const CA = {};
+COINS.forEach(coin => PAIRS.forEach(([a, b]) => {
+  CA[`${a}-${b}:${coin}`] = { sum: 0, count: 0 };
+}));
+
+function loadCumAvg() {
+  try {
+    const raw = localStorage.getItem(CUMAVG_STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    Object.entries(saved).forEach(([key, data]) => {
+      if (CA[key]) { CA[key].sum = data.sum || 0; CA[key].count = data.count || 0; }
+    });
+  } catch (_) {}
+}
+
+function saveCumAvg() {
+  try { localStorage.setItem(CUMAVG_STORAGE_KEY, JSON.stringify(CA)); } catch (_) {}
+}
+
+loadCumAvg();
 
 function initDistribData() {
   COINS.forEach(c => {
@@ -855,6 +914,8 @@ function compute() {
       const dev = spread - avrg;
       st.dev = dev;
       st.spread = spread;
+      CA[key].sum += spread;
+      CA[key].count++;
 
       // Check warmup: need 30 min of data unless restored from fresh localStorage
       if (!st.warmedUp) {
@@ -1019,6 +1080,34 @@ function renderAlerts() {
       <span class="v-dim">${(a.dur / 1000).toFixed(1)}s</span>
     </div>`;
   }).join('');
+}
+
+function renderCumAvg() {
+  const el = document.getElementById('cumavgLog');
+  if (!el) return;
+  let total = 0;
+  let html = `<div class="ca-row ca-hdr"><span>COIN</span><span>PAIR</span><span>AVG</span><span>N</span></div>`;
+  COINS.forEach(coin => {
+    const coinColor = coin === 'BTC' ? 'var(--yellow)' : coin === 'XAU' ? 'var(--accent)' : 'var(--cyan)';
+    PAIRS.forEach(([a, b]) => {
+      const key = `${a}-${b}:${coin}`;
+      const d = CA[key];
+      total += d.count;
+      const avg = d.count > 0 ? d.sum / d.count : null;
+      const cls = avg === null ? 'v-dim' : avg > 0.1 ? 'v-pos' : avg < -0.1 ? 'v-neg' : 'v-dim';
+      const avgTxt = avg === null ? '—' : (avg > 0 ? '+' : '') + avg.toFixed(2);
+      const nTxt = d.count >= 1000 ? (d.count / 1000).toFixed(1) + 'k' : String(d.count);
+      html += `<div class="ca-row">
+        <span style="color:${coinColor};font-weight:700">${coin}</span>
+        <span class="pair-label">${EX_SHORT[a]}—${EX_SHORT[b]}</span>
+        <span class="${cls}">${avgTxt}</span>
+        <span class="v-dim">${nTxt}</span>
+      </div>`;
+    });
+  });
+  el.innerHTML = html;
+  const cnt = total >= 1000 ? (total / 1000).toFixed(1) + 'k' : String(total);
+  document.getElementById('cumavgCnt').textContent = cnt + ' pts';
 }
 
 // ─── Distribution Histogram ──────────────────────────────────────────────────
@@ -1321,6 +1410,7 @@ function tick() {
   COINS.forEach(drawSpark);
   if (ticks % 4 === 0) COINS.forEach(drawDistrib);
   renderAlerts();
+  renderCumAvg();
 
   document.getElementById('clock').textContent = new Date().toLocaleTimeString('en', { hour12: false });
 
@@ -1346,6 +1436,10 @@ function resetAll() {
     st.firstDataTs = null;
   });
   try { localStorage.removeItem(EWMA_STORAGE_KEY); } catch (_) {}
+  try { localStorage.removeItem(CUMAVG_STORAGE_KEY); } catch (_) {}
+  COINS.forEach(coin => PAIRS.forEach(([a, b]) => {
+    CA[`${a}-${b}:${coin}`] = { sum: 0, count: 0 };
+  }));
   alerts.length = 0;
   COINS.forEach(c => {
     sparkHist[c] = [];
@@ -1364,8 +1458,8 @@ connectLighter();
 connectExtended();
 
 setInterval(tick, 250);
-setInterval(() => { saveDistrib(); saveEwma(); }, DISTRIB_SAVE_INTERVAL);
-window.addEventListener('beforeunload', () => { saveDistrib(); saveEwma(); });
+setInterval(() => { saveDistrib(); saveEwma(); saveCumAvg(); }, DISTRIB_SAVE_INTERVAL);
+window.addEventListener('beforeunload', () => { saveDistrib(); saveEwma(); saveCumAvg(); });
 </script>
 </body>
 </html>
