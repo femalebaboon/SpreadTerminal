@@ -131,7 +131,7 @@
   /* ─── Prices Row ─── */
   .prices-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 8px;
   }
 
@@ -155,6 +155,9 @@
   .coin-tag.btc { color: var(--yellow); }
   .coin-tag.xau { color: var(--accent); }
   .coin-tag.wti { color: var(--cyan); }
+  .coin-tag.xag { color: #c0c0c0; }
+  .coin-tag.xpt { color: #a0c8ff; }
+  .coin-tag.xbr { color: #90ee90; }
 
   .price-grid {
     display: grid;
@@ -171,7 +174,7 @@
   /* ─── Spreads Grid ─── */
   .spreads-area {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 1px;
     background: var(--border);
     overflow: hidden;
@@ -275,7 +278,7 @@
   /* ─── Distribution Charts ─── */
   .distrib-area {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 1px;
     background: var(--border);
   }
@@ -298,7 +301,7 @@
   /* ─── Sparklines + Alerts ─── */
   .bottom-area {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 0.9fr 0.9fr;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 0.9fr 0.9fr;
     gap: 1px;
     background: var(--border);
     height: 100%;
@@ -426,6 +429,27 @@
       </div>
       <div class="spread-table" id="st-WTI"></div>
     </div>
+    <div class="coin-panel" id="cp-XAG">
+      <div class="panel-header">
+        <span class="panel-title" style="color:#c0c0c0">XAG</span>
+        <span class="panel-subtitle">cross-exchange deviation (dB)</span>
+      </div>
+      <div class="spread-table" id="st-XAG"></div>
+    </div>
+    <div class="coin-panel" id="cp-XPT">
+      <div class="panel-header">
+        <span class="panel-title" style="color:#a0c8ff">XPT</span>
+        <span class="panel-subtitle">cross-exchange deviation (dB)</span>
+      </div>
+      <div class="spread-table" id="st-XPT"></div>
+    </div>
+    <div class="coin-panel" id="cp-XBR">
+      <div class="panel-header">
+        <span class="panel-title" style="color:#90ee90">XBR</span>
+        <span class="panel-subtitle">cross-exchange deviation (dB)</span>
+      </div>
+      <div class="spread-table" id="st-XBR"></div>
+    </div>
   </div>
 
   <!-- Distribution charts -->
@@ -451,6 +475,27 @@
       </div>
       <canvas class="distrib" id="distrib-WTI"></canvas>
     </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:#c0c0c0">XAG Distribution</span>
+        <span class="panel-subtitle" id="distrib-cnt-XAG">0 pts</span>
+      </div>
+      <canvas class="distrib" id="distrib-XAG"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:#a0c8ff">XPT Distribution</span>
+        <span class="panel-subtitle" id="distrib-cnt-XPT">0 pts</span>
+      </div>
+      <canvas class="distrib" id="distrib-XPT"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:#90ee90">XBR Distribution</span>
+        <span class="panel-subtitle" id="distrib-cnt-XBR">0 pts</span>
+      </div>
+      <canvas class="distrib" id="distrib-XBR"></canvas>
+    </div>
   </div>
 
   <!-- Bottom: sparklines + alerts -->
@@ -472,6 +517,24 @@
         <span class="spark-title" style="color:var(--cyan)">WTI History</span>
       </div>
       <canvas class="spark" id="spark-WTI"></canvas>
+    </div>
+    <div class="spark-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:#c0c0c0">XAG History</span>
+      </div>
+      <canvas class="spark" id="spark-XAG"></canvas>
+    </div>
+    <div class="spark-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:#a0c8ff">XPT History</span>
+      </div>
+      <canvas class="spark" id="spark-XPT"></canvas>
+    </div>
+    <div class="spark-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:#90ee90">XBR History</span>
+      </div>
+      <canvas class="spark" id="spark-XBR"></canvas>
     </div>
     <div class="alert-panel">
       <div class="panel-header">
@@ -495,15 +558,18 @@
 // CONFIG
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const COINS = ['BTC', 'XAU', 'WTI'];
+const COINS = ['BTC', 'XAU', 'WTI', 'XAG', 'XPT', 'XBR'];
 const EXCHANGES = ['hyperliquid', 'lighter', 'extended'];
 const EX_LABEL = { hyperliquid: 'HyperLiq', lighter: 'Lighter', extended: 'Extended' };
 const EX_SHORT = { hyperliquid: 'HL', lighter: 'LT', extended: 'EX' };
 
 const COIN_MAP = {
-  BTC: { hyperliquid: 'BTC',       lighter: 1,   extended: 'BTC-USD' },
-  XAU: { hyperliquid: 'xyz:GOLD',  lighter: 92,  extended: 'XAU-USD' },
-  WTI: { hyperliquid: 'xyz:CL',    lighter: 145, extended: 'WTI-USD' },
+  BTC: { hyperliquid: 'BTC',            lighter: 1,   extended: 'BTC-USD' },
+  XAU: { hyperliquid: 'xyz:GOLD',       lighter: 92,  extended: 'XAU-USD' },
+  WTI: { hyperliquid: 'xyz:CL',         lighter: 145, extended: 'WTI-USD' },
+  XAG: { hyperliquid: 'xyz:SILVER',     lighter: 93,  extended: 'XAG-USD' },
+  XPT: { hyperliquid: 'xyz:PLATINUM',   lighter: 147, extended: 'XPT-USD' },
+  XBR: { hyperliquid: 'xyz:BRENTOIL',   lighter: 159, extended: 'XBR-USD' },
 };
 
 const EWMA_HALF_LIFE = 1800; // seconds
@@ -1070,7 +1136,8 @@ function renderAlerts() {
   const el = document.getElementById('alertLog');
   el.innerHTML = alerts.slice(-50).reverse().map(a => {
     const t = new Date(a.ts).toLocaleTimeString('en', { hour12: false });
-    const cc = a.coin === 'BTC' ? 'color:var(--yellow)' : a.coin === 'XAU' ? 'color:var(--accent)' : 'color:var(--cyan)';
+    const coinColors = { BTC: 'var(--yellow)', XAU: 'var(--accent)', WTI: 'var(--cyan)', XAG: '#c0c0c0', XPT: '#a0c8ff', XBR: '#90ee90' };
+    const cc = `color:${coinColors[a.coin] || 'var(--text)'}`;
     const vc = a.peak > 0 ? 'v-pos' : 'v-neg';
     return `<div class="alert-row">
       <span class="a-time">${t}</span>
@@ -1088,7 +1155,8 @@ function renderCumAvg() {
   let total = 0;
   let html = `<div class="ca-row ca-hdr"><span>COIN</span><span>PAIR</span><span>AVG</span><span>N</span></div>`;
   COINS.forEach(coin => {
-    const coinColor = coin === 'BTC' ? 'var(--yellow)' : coin === 'XAU' ? 'var(--accent)' : 'var(--cyan)';
+    const coinColorMap = { BTC: 'var(--yellow)', XAU: 'var(--accent)', WTI: 'var(--cyan)', XAG: '#c0c0c0', XPT: '#a0c8ff', XBR: '#90ee90' };
+    const coinColor = coinColorMap[coin] || 'var(--text)';
     PAIRS.forEach(([a, b]) => {
       const key = `${a}-${b}:${coin}`;
       const d = CA[key];
