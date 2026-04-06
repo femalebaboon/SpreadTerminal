@@ -1190,17 +1190,6 @@ function updateDensity(data) {
   });
 }
 
-function gaussianKDE(samples, xPoints, bw) {
-  const n = samples.length;
-  if (n === 0) return xPoints.map(() => 0);
-  const c = 1 / (n * bw * Math.sqrt(2 * Math.PI));
-  return xPoints.map(x => {
-    let sum = 0;
-    for (const xi of samples) { const u = (x - xi) / bw; sum += Math.exp(-0.5 * u * u); }
-    return c * sum;
-  });
-}
-
 function drawDensity(coin) {
   const canvas = document.getElementById(`distrib-${coin}`);
   if (!canvas) return;
@@ -1213,13 +1202,14 @@ function drawDensity(coin) {
 
   const w = rect.width, h = rect.height;
   const pairColors = { 'HL-LT': '#00ff88', 'HL-EX': '#ff3355', 'LT-EX': '#58a6ff' };
-  const margin = { top: 16, right: 10, bottom: 30, left: 32 };
+  const margin = { top: 16, right: 10, bottom: 30, left: 40 };
   const pw = w - margin.left - margin.right;
   const ph = h - margin.top - margin.bottom;
+  const BIN = 10; // dB per bar
 
   ctx.clearRect(0, 0, w, h);
 
-  const pairEntries = Object.entries(densityData[coin]).filter(([, arr]) => arr.length >= 10);
+  const pairEntries = Object.entries(densityData[coin]).filter(([, arr]) => arr.length >= 5);
 
   const maxSamples = pairEntries.reduce((m, [, a]) => Math.max(m, a.length), 0);
   document.getElementById(`distrib-cnt-${coin}`).textContent =
@@ -1233,71 +1223,76 @@ function drawDensity(coin) {
     return;
   }
 
-  // x range from all samples
+  // Build histograms: bin (multiple of BIN) -> seconds (1 sample ≈ 1 sec)
+  const histograms = {};
   let xMin = Infinity, xMax = -Infinity;
-  pairEntries.forEach(([, arr]) => arr.forEach(v => {
-    if (v < xMin) xMin = v; if (v > xMax) xMax = v;
-  }));
-  const xPad = Math.max((xMax - xMin) * 0.12, 1);
-  xMin -= xPad; xMax += xPad;
-
-  const N = 120;
-  const xPoints = Array.from({ length: N }, (_, i) => xMin + (i / (N - 1)) * (xMax - xMin));
-
-  // KDE per pair
-  let maxDensity = 0;
-  const kdeResults = pairEntries.map(([pair, arr]) => {
-    const sub = arr.length > 500 ? arr.filter((_, i) => i % Math.ceil(arr.length / 500) === 0) : arr;
-    const mean = sub.reduce((s, v) => s + v, 0) / sub.length;
-    const std = Math.sqrt(sub.reduce((s, v) => s + (v - mean) ** 2, 0) / sub.length) || 1;
-    const bw = Math.max(1.06 * std * Math.pow(sub.length, -0.2), 0.3);
-    const densities = gaussianKDE(sub, xPoints, bw);
-    densities.forEach(d => { if (d > maxDensity) maxDensity = d; });
-    return { pair, densities };
+  pairEntries.forEach(([pair, arr]) => {
+    const bins = new Map();
+    arr.forEach(v => {
+      const bin = Math.round(v / BIN) * BIN;
+      bins.set(bin, (bins.get(bin) || 0) + 1);
+      if (bin < xMin) xMin = bin;
+      if (bin > xMax) xMax = bin;
+    });
+    histograms[pair] = bins;
   });
-  maxDensity = Math.max(maxDensity, 1e-9);
+  xMin -= BIN; xMax += BIN;
+  const binCount = (xMax - xMin) / BIN + 1;
+  const barWidth = pw / binCount;
 
-  // Grid lines
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-  ctx.lineWidth = 0.5;
-  ctx.setLineDash([2, 3]);
+  // Max seconds across all pairs
+  let maxSecs = 1;
+  Object.values(histograms).forEach(bins =>
+    bins.forEach(v => { if (v > maxSecs) maxSecs = v; })
+  );
+
+  // Y grid + labels
+  ctx.font = '8px JetBrains Mono, monospace';
+  ctx.textAlign = 'right';
   for (let i = 0; i <= 4; i++) {
     const y = margin.top + ph - (i / 4) * ph;
+    const val = maxSecs * (i / 4);
+    const label = val >= 3600 ? (val / 3600).toFixed(1) + 'h'
+                : val >= 60   ? (val / 60).toFixed(1) + 'm'
+                :               val.toFixed(0) + 's';
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillText(label, margin.left - 4, y + 3);
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([2, 3]);
     ctx.beginPath(); ctx.moveTo(margin.left, y); ctx.lineTo(w - margin.right, y); ctx.stroke();
+    ctx.setLineDash([]);
   }
-  ctx.setLineDash([]);
 
-  // Draw KDE curves
-  kdeResults.forEach(({ pair, densities }) => {
+  // Bars (overlapping with alpha — all 3 pairs at same x)
+  pairEntries.forEach(([pair]) => {
+    const bins = histograms[pair];
     const color = pairColors[pair] || '#ffffff';
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    densities.forEach((d, i) => {
-      const x = margin.left + (i / (N - 1)) * pw;
-      const y = margin.top + ph - (d / maxDensity) * ph;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    bins.forEach((secs, bin) => {
+      const binIdx = (bin - xMin) / BIN;
+      const bh = (secs / maxSecs) * ph;
+      const x = margin.left + binIdx * barWidth + 1;
+      const bw = barWidth - 2;
+      const y = margin.top + ph - bh;
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.3;
+      ctx.fillRect(x, y, bw, bh);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 0.8;
+      ctx.strokeRect(x, y, bw, bh);
     });
-    ctx.stroke();
-    ctx.globalAlpha = 0.08;
-    ctx.fillStyle = color;
-    ctx.lineTo(margin.left + pw, margin.top + ph);
-    ctx.lineTo(margin.left, margin.top + ph);
-    ctx.closePath();
-    ctx.fill();
-    ctx.globalAlpha = 1;
   });
 
-  // X axis labels
+  // X axis labels (every BIN or every 2×BIN if crowded)
+  const labelStep = barWidth < 18 ? BIN * 2 : BIN;
   ctx.font = '9px JetBrains Mono, monospace';
   ctx.textAlign = 'center';
-  const range = xMax - xMin;
-  const step = Math.max(1, Math.round(range / 8));
-  const startV = Math.ceil(xMin / step) * step;
-  for (let v = startV; v <= xMax; v += step) {
-    const x = margin.left + ((v - xMin) / (xMax - xMin)) * pw;
-    ctx.fillStyle = Math.abs(v) < step * 0.5 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.45)';
-    ctx.fillText((v > 0 ? '+' : '') + v.toFixed(0), x, h - margin.bottom + 12);
+  for (let bin = xMin; bin <= xMax; bin += BIN) {
+    if ((bin - xMin) % labelStep !== 0) continue;
+    const x = margin.left + ((bin - xMin) / BIN + 0.5) * barWidth;
+    ctx.fillStyle = bin === 0 ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.45)';
+    ctx.fillText((bin > 0 ? '+' : '') + bin, x, h - margin.bottom + 12);
   }
 
   // Axis title
