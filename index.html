@@ -195,7 +195,7 @@
 
   .sr { /* spread row */
     display: grid;
-    grid-template-columns: 55px 1fr 60px 60px 60px 60px 46px;
+    grid-template-columns: 55px 60px 60px 60px 60px 46px;
     gap: 3px;
     padding: 5px 0;
     border-bottom: 1px solid rgba(255,255,255,0.03);
@@ -653,7 +653,6 @@ const SPARK_MAX = 600;
 // Spread density: coin -> pair -> [spread samples]
 const densityData = {};
 const DENSITY_STORAGE_KEY = 'spreadTerminal_density';
-const DENSITY_MAX_SAMPLES = 2000;
 const SAVE_INTERVAL = 5000;
 
 // ─── Cumulative True Average ──────────────────────────────────────────────────
@@ -694,7 +693,7 @@ function saveDensity() {
   COINS.forEach(c => {
     out[c] = {};
     Object.entries(densityData[c]).forEach(([pair, arr]) => {
-      out[c][pair] = arr.slice(-500);
+      out[c][pair] = arr.slice(-10000);
     });
   });
   try { localStorage.setItem(DENSITY_STORAGE_KEY, JSON.stringify(out)); } catch (_) {}
@@ -1092,7 +1091,7 @@ function renderSpreads(data) {
     const rows = byCoin[coin];
 
     let html = `<div class="sr hdr">
-      <span>PAIR</span><span>DEVIATION</span><span>DEV</span><span>SPRD</span><span>MAX+</span><span>MAX−</span><span>DUR</span>
+      <span>PAIR</span><span>DEV</span><span>SPRD</span><span>MAX+</span><span>MAX−</span><span>DUR</span>
     </div>`;
 
     if (rows.length === 0) {
@@ -1101,18 +1100,12 @@ function renderSpreads(data) {
 
     rows.forEach(d => {
       const dcls = d.dev > 0 ? 'v-pos' : d.dev < 0 ? 'v-neg' : 'v-dim';
-      const bw = Math.min(48, Math.abs(d.dev) * 1.5);
-      const bdir = d.dev >= 0 ? 'pos' : 'neg';
-      const bstyle = d.dev >= 0
-        ? `left:50%;width:${bw}%`
-        : `right:50%;width:${bw}%;left:auto`;
       const durTxt = d.devDur > 0 ? `${(d.devDur / 1000).toFixed(1)}s` : '';
       const durCls = d.confirmed ? 'hot' : 'cold';
       const sign = d.dev > 0 ? '+' : '';
 
       html += `<div class="sr">
         <span class="pair-label">${EX_SHORT[d.ex1]}—${EX_SHORT[d.ex2]}</span>
-        <div class="dbar-wrap"><div class="dbar-center"></div><div class="dbar ${bdir}" style="${bstyle}"></div></div>
         <span class="${dcls}">${sign}${d.dev.toFixed(1)}</span>
         <span class="v-dim">${d.spread.toFixed(1)}</span>
         <span class="v-pos">${d.maxPos > 0 ? '+' + d.maxPos.toFixed(1) : '—'}</span>
@@ -1186,7 +1179,6 @@ function updateDensity(data) {
     const arr = densityData[d.coin][pair];
     if (!arr) return;
     arr.push(d.spread);
-    if (arr.length > DENSITY_MAX_SAMPLES) arr.shift();
   });
 }
 
@@ -1209,7 +1201,8 @@ function drawDensity(coin) {
 
   ctx.clearRect(0, 0, w, h);
 
-  const pairEntries = Object.entries(densityData[coin]).filter(([, arr]) => arr.length >= 5);
+  const pairEntries = Object.entries(densityData[coin])
+    .filter(([pair, arr]) => pair === 'LT-EX' && arr.length >= 5);
 
   const maxSamples = pairEntries.reduce((m, [, a]) => Math.max(m, a.length), 0);
   document.getElementById(`distrib-cnt-${coin}`).textContent =
@@ -1284,12 +1277,14 @@ function drawDensity(coin) {
     });
   });
 
-  // X axis labels (every BIN or every 2×BIN if crowded)
-  const labelStep = barWidth < 18 ? BIN * 2 : BIN;
+  // X axis labels — adaptive step to prevent overlap
   ctx.font = '9px JetBrains Mono, monospace';
   ctx.textAlign = 'center';
+  const maxLabelW = 30; // px, width of widest label e.g. "-100"
+  const minBarsPerLabel = Math.ceil(maxLabelW / barWidth);
+  const labelStep = BIN * Math.max(1, minBarsPerLabel);
   for (let bin = xMin; bin <= xMax; bin += BIN) {
-    if ((bin - xMin) % labelStep !== 0) continue;
+    if (Math.round((bin - xMin) / BIN) % Math.round(labelStep / BIN) !== 0) continue;
     const x = margin.left + ((bin - xMin) / BIN + 0.5) * barWidth;
     ctx.fillStyle = bin === 0 ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.45)';
     ctx.fillText((bin > 0 ? '+' : '') + bin, x, h - margin.bottom + 12);
