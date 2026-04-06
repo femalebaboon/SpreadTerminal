@@ -275,7 +275,7 @@
     50% { opacity: 0.6; }
   }
 
-  /* ─── Distribution Charts ─── */
+  /* ─── Spread Density Charts ─── */
   .distrib-area {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
@@ -452,46 +452,46 @@
     </div>
   </div>
 
-  <!-- Distribution charts -->
+  <!-- Spread Density charts -->
   <div class="distrib-area">
     <div class="distrib-panel">
       <div class="spark-head">
-        <span class="spark-title" style="color:var(--yellow)">BTC Distribution</span>
+        <span class="spark-title" style="color:var(--yellow)">BTC Spread Density</span>
         <span class="panel-subtitle" id="distrib-cnt-BTC">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-BTC"></canvas>
     </div>
     <div class="distrib-panel">
       <div class="spark-head">
-        <span class="spark-title" style="color:var(--accent)">XAU Distribution</span>
+        <span class="spark-title" style="color:var(--accent)">XAU Spread Density</span>
         <span class="panel-subtitle" id="distrib-cnt-XAU">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-XAU"></canvas>
     </div>
     <div class="distrib-panel">
       <div class="spark-head">
-        <span class="spark-title" style="color:var(--cyan)">WTI Distribution</span>
+        <span class="spark-title" style="color:var(--cyan)">WTI Spread Density</span>
         <span class="panel-subtitle" id="distrib-cnt-WTI">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-WTI"></canvas>
     </div>
     <div class="distrib-panel">
       <div class="spark-head">
-        <span class="spark-title" style="color:#c0c0c0">XAG Distribution</span>
+        <span class="spark-title" style="color:#c0c0c0">XAG Spread Density</span>
         <span class="panel-subtitle" id="distrib-cnt-XAG">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-XAG"></canvas>
     </div>
     <div class="distrib-panel">
       <div class="spark-head">
-        <span class="spark-title" style="color:#a0c8ff">XPT Distribution</span>
+        <span class="spark-title" style="color:#a0c8ff">XPT Spread Density</span>
         <span class="panel-subtitle" id="distrib-cnt-XPT">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-XPT"></canvas>
     </div>
     <div class="distrib-panel">
       <div class="spark-head">
-        <span class="spark-title" style="color:#90ee90">XBR Distribution</span>
+        <span class="spark-title" style="color:#90ee90">XBR Spread Density</span>
         <span class="panel-subtitle" id="distrib-cnt-XBR">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-XBR"></canvas>
@@ -650,11 +650,11 @@ const sparkHist = {}; // coin -> [{ts, entries: [{pair, dev}]}]
 COINS.forEach(c => sparkHist[c] = []);
 const SPARK_MAX = 600;
 
-// Distribution histogram: coin -> pair -> {bins: Map<binIndex, timeMs>, totalTime}
-const distribData = {};
-const DISTRIB_BIN_SIZE = 1; // 1 dB per bin
-const DISTRIB_STORAGE_KEY = 'spreadTerminal_distrib';
-const DISTRIB_SAVE_INTERVAL = 5000; // save every 5s
+// Spread density: coin -> pair -> [spread samples]
+const densityData = {};
+const DENSITY_STORAGE_KEY = 'spreadTerminal_density';
+const DENSITY_MAX_SAMPLES = 2000;
+const SAVE_INTERVAL = 5000;
 
 // ─── Cumulative True Average ──────────────────────────────────────────────────
 const CUMAVG_STORAGE_KEY = 'spreadTerminal_cumavg';
@@ -680,49 +680,43 @@ function saveCumAvg() {
 
 loadCumAvg();
 
-function initDistribData() {
+function initDensityData() {
   COINS.forEach(c => {
-    distribData[c] = {};
+    densityData[c] = {};
     PAIRS.forEach(([a, b]) => {
-      const pair = `${EX_SHORT[a]}-${EX_SHORT[b]}`;
-      distribData[c][pair] = { bins: new Map(), totalTime: 0 };
+      densityData[c][`${EX_SHORT[a]}-${EX_SHORT[b]}`] = [];
     });
   });
 }
 
-function saveDistrib() {
+function saveDensity() {
   const out = {};
   COINS.forEach(c => {
     out[c] = {};
-    Object.entries(distribData[c]).forEach(([pair, hist]) => {
-      out[c][pair] = {
-        bins: Object.fromEntries(hist.bins),
-        totalTime: hist.totalTime,
-      };
+    Object.entries(densityData[c]).forEach(([pair, arr]) => {
+      out[c][pair] = arr.slice(-500);
     });
   });
-  try { localStorage.setItem(DISTRIB_STORAGE_KEY, JSON.stringify(out)); } catch (_) {}
+  try { localStorage.setItem(DENSITY_STORAGE_KEY, JSON.stringify(out)); } catch (_) {}
 }
 
-function loadDistrib() {
+function loadDensity() {
   try {
-    const raw = localStorage.getItem(DISTRIB_STORAGE_KEY);
+    const raw = localStorage.getItem(DENSITY_STORAGE_KEY);
     if (!raw) return;
     const saved = JSON.parse(raw);
     COINS.forEach(c => {
       if (!saved[c]) return;
-      Object.entries(saved[c]).forEach(([pair, data]) => {
-        if (!distribData[c][pair]) return;
-        distribData[c][pair].totalTime = data.totalTime || 0;
-        distribData[c][pair].bins = new Map(Object.entries(data.bins).map(([k, v]) => [Number(k), v]));
+      Object.entries(saved[c]).forEach(([pair, arr]) => {
+        if (densityData[c] && densityData[c][pair]) densityData[c][pair] = arr;
       });
     });
-    console.log('[Distrib] Restored from localStorage');
+    console.log('[Density] Restored from localStorage');
   } catch (_) {}
 }
 
-initDistribData();
-loadDistrib();
+initDensityData();
+loadDensity();
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MATH
@@ -1178,26 +1172,36 @@ function renderCumAvg() {
   document.getElementById('cumavgCnt').textContent = cnt + ' pts';
 }
 
-// ─── Distribution Histogram ──────────────────────────────────────────────────
+// ─── Spread Density (KDE) ─────────────────────────────────────────────────────
 
-let lastTickTime = Date.now();
+let lastDensityTick = 0;
 
-function updateDistrib(data) {
+function updateDensity(data) {
   const now = Date.now();
-  const dt = Math.min(now - lastTickTime, 2000); // cap at 2s to avoid huge jumps
-  lastTickTime = now;
+  if (now - lastDensityTick < 900) return; // ~1 sample/sec
+  lastDensityTick = now;
   data.forEach(d => {
-    if (!d.warmedUp) return; // skip until EWMA is stable
+    if (!d.warmedUp) return;
     const pair = `${EX_SHORT[d.ex1]}-${EX_SHORT[d.ex2]}`;
-    const hist = distribData[d.coin][pair];
-    if (!hist) return;
-    const bin = Math.round(d.dev / DISTRIB_BIN_SIZE);
-    hist.bins.set(bin, (hist.bins.get(bin) || 0) + dt);
-    hist.totalTime += dt;
+    const arr = densityData[d.coin][pair];
+    if (!arr) return;
+    arr.push(d.spread);
+    if (arr.length > DENSITY_MAX_SAMPLES) arr.shift();
   });
 }
 
-function drawDistrib(coin) {
+function gaussianKDE(samples, xPoints, bw) {
+  const n = samples.length;
+  if (n === 0) return xPoints.map(() => 0);
+  const c = 1 / (n * bw * Math.sqrt(2 * Math.PI));
+  return xPoints.map(x => {
+    let sum = 0;
+    for (const xi of samples) { const u = (x - xi) / bw; sum += Math.exp(-0.5 * u * u); }
+    return c * sum;
+  });
+}
+
+function drawDensity(coin) {
   const canvas = document.getElementById(`distrib-${coin}`);
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -1213,28 +1217,15 @@ function drawDistrib(coin) {
   const pw = w - margin.left - margin.right;
   const ph = h - margin.top - margin.bottom;
 
-  // Collect all bins across pairs to find x range
-  let allEmpty = true;
-  let binMin = 0, binMax = 0;
-  const pairEntries = [];
-  Object.entries(distribData[coin]).forEach(([pair, hist]) => {
-    if (hist.bins.size === 0) return;
-    allEmpty = false;
-    hist.bins.forEach((_, bin) => {
-      if (bin < binMin) binMin = bin;
-      if (bin > binMax) binMax = bin;
-    });
-    pairEntries.push([pair, hist]);
-  });
-
-  const totalSamples = pairEntries.reduce((s, [, h]) => s + h.totalTime, 0);
-  document.getElementById(`distrib-cnt-${coin}`).textContent = totalSamples > 0
-    ? `${(totalSamples / 1000).toFixed(0)}s`
-    : '0s';
-
   ctx.clearRect(0, 0, w, h);
 
-  if (allEmpty) {
+  const pairEntries = Object.entries(densityData[coin]).filter(([, arr]) => arr.length >= 10);
+
+  const maxSamples = pairEntries.reduce((m, [, a]) => Math.max(m, a.length), 0);
+  document.getElementById(`distrib-cnt-${coin}`).textContent =
+    maxSamples > 0 ? `${maxSamples} pts` : '0 pts';
+
+  if (pairEntries.length === 0) {
     ctx.fillStyle = 'rgba(255,255,255,0.1)';
     ctx.font = '10px JetBrains Mono, monospace';
     ctx.textAlign = 'center';
@@ -1242,19 +1233,31 @@ function drawDistrib(coin) {
     return;
   }
 
-  // Pad x range
-  binMin = Math.min(binMin, -3);
-  binMax = Math.max(binMax, 3);
-  const binCount = binMax - binMin + 1;
+  // x range from all samples
+  let xMin = Infinity, xMax = -Infinity;
+  pairEntries.forEach(([, arr]) => arr.forEach(v => {
+    if (v < xMin) xMin = v; if (v > xMax) xMax = v;
+  }));
+  const xPad = Math.max((xMax - xMin) * 0.12, 1);
+  xMin -= xPad; xMax += xPad;
 
-  // Find max ms across all pairs
-  let maxMs = 0;
-  pairEntries.forEach(([, hist]) => {
-    hist.bins.forEach(v => { if (v > maxMs) maxMs = v; });
+  const N = 120;
+  const xPoints = Array.from({ length: N }, (_, i) => xMin + (i / (N - 1)) * (xMax - xMin));
+
+  // KDE per pair
+  let maxDensity = 0;
+  const kdeResults = pairEntries.map(([pair, arr]) => {
+    const sub = arr.length > 500 ? arr.filter((_, i) => i % Math.ceil(arr.length / 500) === 0) : arr;
+    const mean = sub.reduce((s, v) => s + v, 0) / sub.length;
+    const std = Math.sqrt(sub.reduce((s, v) => s + (v - mean) ** 2, 0) / sub.length) || 1;
+    const bw = Math.max(1.06 * std * Math.pow(sub.length, -0.2), 0.3);
+    const densities = gaussianKDE(sub, xPoints, bw);
+    densities.forEach(d => { if (d > maxDensity) maxDensity = d; });
+    return { pair, densities };
   });
-  maxMs = Math.max(maxMs, 1000); // at least 1s
+  maxDensity = Math.max(maxDensity, 1e-9);
 
-  // Grid
+  // Grid lines
   ctx.strokeStyle = 'rgba(255,255,255,0.06)';
   ctx.lineWidth = 0.5;
   ctx.setLineDash([2, 3]);
@@ -1262,40 +1265,20 @@ function drawDistrib(coin) {
     const y = margin.top + ph - (i / 4) * ph;
     ctx.beginPath(); ctx.moveTo(margin.left, y); ctx.lineTo(w - margin.right, y); ctx.stroke();
   }
-  const gridStep = Math.max(1, Math.ceil(binCount / 10));
-  for (let bin = binMin; bin <= binMax; bin += gridStep) {
-    const x = margin.left + ((bin - binMin + 0.5) / binCount) * pw;
-    ctx.beginPath(); ctx.moveTo(x, margin.top); ctx.lineTo(x, h - margin.bottom); ctx.stroke();
-  }
   ctx.setLineDash([]);
 
-  // Zero deviation line
-  const zeroX = margin.left + ((0 - binMin) / (binMax - binMin)) * pw;
-  if (zeroX >= margin.left && zeroX <= w - margin.right) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(zeroX, margin.top); ctx.lineTo(zeroX, h - margin.bottom); ctx.stroke();
-  }
-
-  // Draw each pair as a line
-  const barWidth = pw / binCount;
-  pairEntries.forEach(([pair, hist]) => {
+  // Draw KDE curves
+  kdeResults.forEach(({ pair, densities }) => {
     const color = pairColors[pair] || '#ffffff';
     ctx.strokeStyle = color;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-
-    let first = true;
-    for (let bin = binMin; bin <= binMax; bin++) {
-      const t = hist.bins.get(bin) || 0;
-      const norm = maxMs > 0 ? t / maxMs : 0;
-      const x = margin.left + ((bin - binMin + 0.5) / binCount) * pw;
-      const y = margin.top + ph - Math.min(norm, 1) * ph;
-      if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
-    }
+    densities.forEach((d, i) => {
+      const x = margin.left + (i / (N - 1)) * pw;
+      const y = margin.top + ph - (d / maxDensity) * ph;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
     ctx.stroke();
-
-    // Fill under curve
     ctx.globalAlpha = 0.08;
     ctx.fillStyle = color;
     ctx.lineTo(margin.left + pw, margin.top + ph);
@@ -1305,42 +1288,23 @@ function drawDistrib(coin) {
     ctx.globalAlpha = 1;
   });
 
-  // Y axis labels (absolute time)
-  ctx.fillStyle = 'rgba(255,255,255,0.3)';
-  ctx.font = '8px JetBrains Mono, monospace';
-  ctx.textAlign = 'right';
-  for (let i = 0; i <= 4; i++) {
-    const y = margin.top + ph - (i / 4) * ph;
-    const val = (maxMs / 1000) * (i / 4);
-    const label = val >= 60 ? (val / 60).toFixed(1) + 'm' : val.toFixed(0) + 's';
-    ctx.fillText(label, margin.left - 4, y + 3);
-  }
-
-  // X axis labels (deviation in dB)
+  // X axis labels
   ctx.font = '9px JetBrains Mono, monospace';
   ctx.textAlign = 'center';
-  const step = Math.max(1, Math.ceil(binCount / 10));
-  const drawnBins = new Set();
-  // Always draw 0 first
-  if (binMin <= 0 && binMax >= 0) {
-    const x0 = margin.left + ((0 - binMin + 0.5) / binCount) * pw;
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.fillText('0', x0, h - margin.bottom + 12);
-    drawnBins.add(0);
-  }
-  ctx.fillStyle = 'rgba(255,255,255,0.45)';
-  for (let bin = binMin; bin <= binMax; bin += step) {
-    if (drawnBins.has(bin)) continue;
-    const x = margin.left + ((bin - binMin + 0.5) / binCount) * pw;
-    const val = bin * DISTRIB_BIN_SIZE;
-    ctx.fillText((val > 0 ? '+' : '') + val.toFixed(0), x, h - margin.bottom + 12);
+  const range = xMax - xMin;
+  const step = Math.max(1, Math.round(range / 8));
+  const startV = Math.ceil(xMin / step) * step;
+  for (let v = startV; v <= xMax; v += step) {
+    const x = margin.left + ((v - xMin) / (xMax - xMin)) * pw;
+    ctx.fillStyle = Math.abs(v) < step * 0.5 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.45)';
+    ctx.fillText((v > 0 ? '+' : '') + v.toFixed(0), x, h - margin.bottom + 12);
   }
 
   // Axis title
   ctx.fillStyle = 'rgba(255,255,255,0.25)';
   ctx.font = '8px JetBrains Mono, monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('deviation (dB)', margin.left + pw / 2, h - 2);
+  ctx.fillText('spread (dB)', margin.left + pw / 2, h - 2);
 
   // Legend
   ctx.font = '8px JetBrains Mono, monospace';
@@ -1474,9 +1438,9 @@ function tick() {
   renderPrices();
   renderSpreads(data);
   updateSparkData(data);
-  updateDistrib(data);
+  updateDensity(data);
   COINS.forEach(drawSpark);
-  if (ticks % 4 === 0) COINS.forEach(drawDistrib);
+  if (ticks % 4 === 0) COINS.forEach(drawDensity);
   renderAlerts();
   renderCumAvg();
 
@@ -1511,8 +1475,8 @@ function resetAll() {
   alerts.length = 0;
   COINS.forEach(c => {
     sparkHist[c] = [];
-    Object.values(distribData[c]).forEach(h => { h.bins.clear(); h.totalTime = 0; });
-    try { localStorage.removeItem(DISTRIB_STORAGE_KEY); } catch (_) {}
+    Object.keys(densityData[c]).forEach(p => { densityData[c][p] = []; });
+    try { localStorage.removeItem(DENSITY_STORAGE_KEY); } catch (_) {}
   });
   ticks = 0;
 }
@@ -1526,8 +1490,8 @@ connectLighter();
 connectExtended();
 
 setInterval(tick, 250);
-setInterval(() => { saveDistrib(); saveEwma(); saveCumAvg(); }, DISTRIB_SAVE_INTERVAL);
-window.addEventListener('beforeunload', () => { saveDistrib(); saveEwma(); saveCumAvg(); });
+setInterval(() => { saveDensity(); saveEwma(); saveCumAvg(); }, SAVE_INTERVAL);
+window.addEventListener('beforeunload', () => { saveDensity(); saveEwma(); saveCumAvg(); });
 </script>
 </body>
 </html>
