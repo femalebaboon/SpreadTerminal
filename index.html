@@ -98,7 +98,7 @@
   /* ─── Main Layout ─── */
   .main {
     display: grid;
-    grid-template-rows: auto 2fr 1fr 100px;
+    grid-template-rows: auto 2fr 1fr 1fr 1fr 100px;
     gap: 1px;
     background: var(--border);
     height: calc(100vh - 38px);
@@ -377,6 +377,22 @@
     background: var(--panel);
   }
 
+  .avrg-wrap { display: flex; align-items: center; gap: 5px; }
+  .avrg-label { color: var(--dim); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+  .avrg-input {
+    background: rgba(255,140,0,0.1);
+    border: 1px solid rgba(255,140,0,0.5);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 11px;
+    width: 54px;
+    text-align: center;
+    outline: none;
+  }
+  .avrg-input:focus { border-color: var(--accent); }
+
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -391,6 +407,10 @@
   </div>
   <div class="topbar-right">
     <span id="stats">—</span>
+    <div class="avrg-wrap">
+      <span class="avrg-label">AVRG</span>
+      <input class="avrg-input" id="avrgInput" type="number" value="-20">
+    </div>
     <button class="btn" onclick="resetAll()">RESET</button>
     <span class="clock" id="clock">--:--:--</span>
   </div>
@@ -498,6 +518,98 @@
     </div>
   </div>
 
+  <!-- Round Trip Count f(x) -->
+  <div class="distrib-area">
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:var(--yellow)">BTC  f(x)</span>
+        <span class="panel-subtitle" id="rt-sub-BTC">round trips</span>
+      </div>
+      <canvas class="distrib" id="rt-BTC"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:var(--accent)">XAU  f(x)</span>
+        <span class="panel-subtitle" id="rt-sub-XAU">round trips</span>
+      </div>
+      <canvas class="distrib" id="rt-XAU"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:var(--cyan)">WTI  f(x)</span>
+        <span class="panel-subtitle" id="rt-sub-WTI">round trips</span>
+      </div>
+      <canvas class="distrib" id="rt-WTI"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:#c0c0c0">XAG  f(x)</span>
+        <span class="panel-subtitle" id="rt-sub-XAG">round trips</span>
+      </div>
+      <canvas class="distrib" id="rt-XAG"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:#a0c8ff">XPT  f(x)</span>
+        <span class="panel-subtitle" id="rt-sub-XPT">round trips</span>
+      </div>
+      <canvas class="distrib" id="rt-XPT"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:#90ee90">XBR  f(x)</span>
+        <span class="panel-subtitle" id="rt-sub-XBR">round trips</span>
+      </div>
+      <canvas class="distrib" id="rt-XBR"></canvas>
+    </div>
+  </div>
+
+  <!-- f(x)·(x−21) -->
+  <div class="distrib-area">
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:var(--yellow)">BTC  f·(x−21)</span>
+        <span class="panel-subtitle" id="profit-sub-BTC">expected profit</span>
+      </div>
+      <canvas class="distrib" id="profit-BTC"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:var(--accent)">XAU  f·(x−21)</span>
+        <span class="panel-subtitle" id="profit-sub-XAU">expected profit</span>
+      </div>
+      <canvas class="distrib" id="profit-XAU"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:var(--cyan)">WTI  f·(x−21)</span>
+        <span class="panel-subtitle" id="profit-sub-WTI">expected profit</span>
+      </div>
+      <canvas class="distrib" id="profit-WTI"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:#c0c0c0">XAG  f·(x−21)</span>
+        <span class="panel-subtitle" id="profit-sub-XAG">expected profit</span>
+      </div>
+      <canvas class="distrib" id="profit-XAG"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:#a0c8ff">XPT  f·(x−21)</span>
+        <span class="panel-subtitle" id="profit-sub-XPT">expected profit</span>
+      </div>
+      <canvas class="distrib" id="profit-XPT"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:#90ee90">XBR  f·(x−21)</span>
+        <span class="panel-subtitle" id="profit-sub-XBR">expected profit</span>
+      </div>
+      <canvas class="distrib" id="profit-XBR"></canvas>
+    </div>
+  </div>
+
   <!-- Bottom: sparklines + alerts -->
   <div class="bottom-area">
     <div class="spark-panel">
@@ -600,7 +712,6 @@ for (let i = 0; i < EXCHANGES.length; i++)
 
 const EWMA_STORAGE_KEY = 'spreadTerminal_ewma';
 const EWMA_FRESHNESS_MS = 10 * 60 * 1000; // 10 minutes
-const WARMUP_MS = 30 * 60 * 1000; // 30 minutes
 
 COINS.forEach(coin => PAIRS.forEach(([a, b]) => {
   SS[`${a}-${b}:${coin}`] = {
@@ -608,8 +719,6 @@ COINS.forEach(coin => PAIRS.forEach(([a, b]) => {
     dev: 0, spread: 0,
     maxPos: 0, maxNeg: 0,
     devStart: null, devSign: 0,
-    warmedUp: false,
-    firstDataTs: null,
   };
 }));
 
@@ -625,8 +734,6 @@ function loadEwma() {
       if (now - data.ewmaTs < EWMA_FRESHNESS_MS) {
         SS[key].ewma = data.ewma;
         SS[key].ewmaTs = data.ewmaTs;
-        SS[key].warmedUp = true;
-        SS[key].firstDataTs = data.firstDataTs || data.ewmaTs;
       }
     });
     console.log('[EWMA] Restored from localStorage');
@@ -637,7 +744,7 @@ function saveEwma() {
   const out = {};
   Object.entries(SS).forEach(([key, st]) => {
     if (!isNaN(st.ewma) && st.ewmaTs) {
-      out[key] = { ewma: st.ewma, ewmaTs: st.ewmaTs, firstDataTs: st.firstDataTs };
+      out[key] = { ewma: st.ewma, ewmaTs: st.ewmaTs };
     }
   });
   try { localStorage.setItem(EWMA_STORAGE_KEY, JSON.stringify(out)); } catch (_) {}
@@ -968,20 +1075,12 @@ function compute() {
 
       const key = `${ex1}-${ex2}:${coin}`;
       const st = SS[key];
-      if (!st.firstDataTs) st.firstDataTs = now;
       const avrg = updateEwma(st, spread, now);
       const dev = spread - avrg;
       st.dev = dev;
       st.spread = spread;
       CA[key].sum += spread;
       CA[key].count++;
-
-      // Check warmup: need 30 min of data unless restored from fresh localStorage
-      if (!st.warmedUp) {
-        if (now - st.firstDataTs >= WARMUP_MS) {
-          st.warmedUp = true;
-        }
-      }
 
       // Duration tracking
       const sign = dev > NOISE_FLOOR ? 1 : dev < -NOISE_FLOOR ? -1 : 0;
@@ -1015,7 +1114,6 @@ function compute() {
         coin, ex1, ex2, spread, avrg, dev, devDur,
         confirmed: devDur >= CONFIRM_MS,
         maxPos: st.maxPos, maxNeg: st.maxNeg,
-        warmedUp: st.warmedUp,
       });
     });
   });
@@ -1174,7 +1272,6 @@ function updateDensity(data) {
   if (now - lastDensityTick < 900) return; // ~1 sample/sec
   lastDensityTick = now;
   data.forEach(d => {
-    if (!d.warmedUp) return;
     const pair = `${EX_SHORT[d.ex1]}-${EX_SHORT[d.ex2]}`;
     const arr = densityData[d.coin][pair];
     if (!arr) return;
@@ -1309,6 +1406,163 @@ function drawDensity(coin) {
   });
 }
 
+// ─── Round Trip Charts ───────────────────────────────────────────────────────
+
+let AVRG = -20;
+document.getElementById('avrgInput').addEventListener('change', function() {
+  const v = parseFloat(this.value);
+  if (isFinite(v)) AVRG = v;
+});
+
+// Returns array of 60 values: f(21), f(22), ..., f(80)
+// f(x) = number of round trips the spread made between (AVRG+x) and (AVRG-x)
+function computeRoundTrips(samples) {
+  const N = 60;
+  const result = new Array(N).fill(0);
+  if (samples.length < 2) return result;
+  for (let xi = 0; xi < N; xi++) {
+    const x = xi + 21;
+    const upper = AVRG + x;
+    const lower = AVRG - x;
+    let count = 0;
+    let last = 0; // 0=neutral, 1=touched upper, -1=touched lower
+    for (let i = 0; i < samples.length; i++) {
+      const s = samples[i];
+      if (s >= upper) {
+        if (last !== 1) {
+          if (last === -1) count++;
+          last = 1;
+        }
+      } else if (s <= lower) {
+        if (last !== -1) {
+          if (last === 1) count++;
+          last = -1;
+        }
+      }
+    }
+    result[xi] = count;
+  }
+  return result;
+}
+
+function _drawRoundTripChart(canvas, values, subId, color, labelY) {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+
+  const w = rect.width, h = rect.height;
+  const margin = { top: 14, right: 10, bottom: 28, left: 38 };
+  const pw = w - margin.left - margin.right;
+  const ph = h - margin.top - margin.bottom;
+  const N = 60; // x from 21..80
+
+  ctx.clearRect(0, 0, w, h);
+
+  const maxVal = values.reduce((m, v) => Math.max(m, v), 1);
+
+  if (maxVal === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Collecting data…', w / 2, h / 2);
+    return;
+  }
+
+  const barW = pw / N;
+
+  // Y grid
+  ctx.font = '8px JetBrains Mono, monospace';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const y = margin.top + ph - (i / 4) * ph;
+    const val = maxVal * (i / 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillText(val.toFixed(0), margin.left - 4, y + 3);
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath(); ctx.moveTo(margin.left, y); ctx.lineTo(w - margin.right, y); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Find x with max value — draw highlight
+  let maxIdx = 0;
+  for (let xi = 1; xi < N; xi++) if (values[xi] > values[maxIdx]) maxIdx = xi;
+
+  // Bars
+  for (let xi = 0; xi < N; xi++) {
+    const v = values[xi];
+    if (v === 0) continue;
+    const bh = (v / maxVal) * ph;
+    const bx = margin.left + xi * barW + 0.5;
+    const by = margin.top + ph - bh;
+    const bw = Math.max(barW - 1, 1);
+    ctx.globalAlpha = xi === maxIdx ? 0.85 : 0.45;
+    ctx.fillStyle = color;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.globalAlpha = 1;
+    if (xi === maxIdx) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx, by, bw, bh);
+    }
+  }
+
+  // X axis labels: show 21, 30, 40, 50, 60, 70, 80
+  ctx.font = '8px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  [21, 30, 40, 50, 60, 70, 80].forEach(x => {
+    const xi = x - 21;
+    const lx = margin.left + (xi + 0.5) * barW;
+    ctx.fillText(String(x), lx, h - margin.bottom + 11);
+  });
+
+  // Axis title
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.font = '8px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('x (dB)', margin.left + pw / 2, h - 2);
+
+  // Mark optimal x
+  const optX = maxIdx + 21;
+  const subEl = document.getElementById(subId);
+  if (subEl) subEl.textContent = `peak x=${optX}  ${labelY(values[maxIdx])}`;
+
+  // Vertical line at optimal
+  const vx = margin.left + (maxIdx + 0.5) * barW;
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.lineWidth = 0.8;
+  ctx.setLineDash([2, 2]);
+  ctx.beginPath(); ctx.moveTo(vx, margin.top); ctx.lineTo(vx, margin.top + ph); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawRoundTrips(coin) {
+  const canvas = document.getElementById(`rt-${coin}`);
+  const samples = densityData[coin]?.['LT-EX'];
+  if (!samples || samples.length < 5) return;
+  const rt = computeRoundTrips(samples);
+  const coinColors = { BTC: '#ffd700', XAU: '#ff8c00', WTI: '#00d4ff', XAG: '#c0c0c0', XPT: '#a0c8ff', XBR: '#90ee90' };
+  _drawRoundTripChart(canvas, rt, `rt-sub-${coin}`, coinColors[coin] || '#ffffff',
+    v => `${v} trips`);
+}
+
+function drawRoundTripProfit(coin) {
+  const canvas = document.getElementById(`profit-${coin}`);
+  const samples = densityData[coin]?.['LT-EX'];
+  if (!samples || samples.length < 5) return;
+  const rt = computeRoundTrips(samples);
+  const profit = rt.map((count, xi) => count * xi); // xi = x - 21
+  const coinColors = { BTC: '#ffd700', XAU: '#ff8c00', WTI: '#00d4ff', XAG: '#c0c0c0', XPT: '#a0c8ff', XBR: '#90ee90' };
+  _drawRoundTripChart(canvas, profit, `profit-sub-${coin}`, coinColors[coin] || '#ffffff',
+    v => `${v.toFixed(0)}`);
+}
+
 // ─── Sparklines ──────────────────────────────────────────────────────────────
 
 function updateSparkData(data) {
@@ -1430,22 +1684,17 @@ function tick() {
   updateSparkData(data);
   updateDensity(data);
   COINS.forEach(drawSpark);
-  if (ticks % 4 === 0) COINS.forEach(drawDensity);
+  if (ticks % 4 === 0) {
+    COINS.forEach(drawDensity);
+    COINS.forEach(drawRoundTrips);
+    COINS.forEach(drawRoundTripProfit);
+  }
   renderAlerts();
   renderCumAvg();
 
   document.getElementById('clock').textContent = new Date().toLocaleTimeString('en', { hour12: false });
 
-  // Warmup status
-  const allWarmed = Object.values(SS).every(st => st.warmedUp || st.firstDataTs === null);
-  if (allWarmed) {
-    document.getElementById('stats').textContent = `tick #${ticks}`;
-  } else {
-    const minFirst = Math.min(...Object.values(SS).filter(st => st.firstDataTs && !st.warmedUp).map(st => st.firstDataTs));
-    const elapsed = Date.now() - minFirst;
-    const remaining = Math.max(0, Math.ceil((WARMUP_MS - elapsed) / 60000));
-    document.getElementById('stats').textContent = `WARMING UP · ${remaining}m left`;
-  }
+  document.getElementById('stats').textContent = `tick #${ticks}`;
 }
 
 function resetAll() {
@@ -1454,8 +1703,6 @@ function resetAll() {
     st.maxNeg = 0;
     st.ewma = NaN;
     st.ewmaTs = null;
-    st.warmedUp = false;
-    st.firstDataTs = null;
   });
   try { localStorage.removeItem(EWMA_STORAGE_KEY); } catch (_) {}
   try { localStorage.removeItem(CUMAVG_STORAGE_KEY); } catch (_) {}
