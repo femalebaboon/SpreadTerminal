@@ -431,6 +431,16 @@
   <div class="topbar-right">
     <span id="stats">—</span>
     <div class="avrg-wrap">
+      <span class="avrg-label">Last pts</span>
+      <input class="avrg-input" id="densityWindowInput" type="number" min="1" placeholder="all"
+        title="Количество последних точек. Пусто = все данные." style="width:60px">
+    </div>
+    <div class="avrg-wrap">
+      <span class="avrg-label">max x</span>
+      <input class="avrg-input" id="maxXInput" type="number" min="22" max="500" value="80"
+        title="Максимальное x для f(x) и best AVRG" style="width:54px">
+    </div>
+    <div class="avrg-wrap">
       <span class="avrg-label">AVRG</span>
       <input class="avrg-input" id="avrgInput" type="number" value="-20">
     </div>
@@ -497,15 +507,6 @@
 
   <!-- Spread Density charts -->
   <div class="distrib-area">
-    <div class="density-ctrl" style="grid-column: 1 / -1;">
-      <span class="density-ctrl-label">Last pts</span>
-      <input class="density-window-input" id="densityWindowInput" type="number" min="1" placeholder="all"
-        title="Количество последних точек для построения графиков. Пусто = все накопленные данные.">
-      <span class="density-ctrl-label" id="densityWindowInfo" style="color:rgba(88,166,255,0.5)">all data</span>
-      <span class="density-ctrl-label" style="margin-left:16px">max x</span>
-      <input class="density-window-input" id="maxXInput" type="number" min="22" max="500" value="80"
-        title="Максимальное значение x для графиков f(x)·(x−21) и best AVRG">
-    </div>
     <div class="distrib-panel">
       <div class="spark-head">
         <span class="spark-title" style="color:var(--yellow)">BTC Spread Density</span>
@@ -1467,9 +1468,7 @@ let densityWindow = 0; // 0 = all accumulated data
 document.getElementById('densityWindowInput').addEventListener('input', function() {
   const v = parseInt(this.value, 10);
   densityWindow = (isFinite(v) && v > 0) ? v : 0;
-  const info = document.getElementById('densityWindowInfo');
-  info.textContent = densityWindow > 0 ? `of ${densityWindow}` : 'all data';
-  COINS.forEach(c => { delete _avrgOptCache[c]; }); // recompute on window change
+  COINS.forEach(c => { delete _avrgOptCache[c]; });
 });
 
 function getDensitySamples(coin) {
