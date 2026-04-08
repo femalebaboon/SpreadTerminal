@@ -98,7 +98,7 @@
   /* ─── Main Layout ─── */
   .main {
     display: grid;
-    grid-template-rows: auto 2fr 1fr 1fr 1fr 1fr 100px;
+    grid-template-rows: auto 2fr 1fr 1fr 1fr 100px;
     gap: 1px;
     background: var(--border);
     height: calc(100vh - 38px);
@@ -547,51 +547,6 @@
     </div>
   </div>
 
-  <!-- Round Trip Count f(x) -->
-  <div class="distrib-area">
-    <div class="distrib-panel">
-      <div class="spark-head">
-        <span class="spark-title" style="color:var(--yellow)">BTC  f(x)</span>
-        <span class="panel-subtitle" id="rt-sub-BTC">round trips</span>
-      </div>
-      <canvas class="distrib" id="rt-BTC"></canvas>
-    </div>
-    <div class="distrib-panel">
-      <div class="spark-head">
-        <span class="spark-title" style="color:var(--accent)">XAU  f(x)</span>
-        <span class="panel-subtitle" id="rt-sub-XAU">round trips</span>
-      </div>
-      <canvas class="distrib" id="rt-XAU"></canvas>
-    </div>
-    <div class="distrib-panel">
-      <div class="spark-head">
-        <span class="spark-title" style="color:var(--cyan)">WTI  f(x)</span>
-        <span class="panel-subtitle" id="rt-sub-WTI">round trips</span>
-      </div>
-      <canvas class="distrib" id="rt-WTI"></canvas>
-    </div>
-    <div class="distrib-panel">
-      <div class="spark-head">
-        <span class="spark-title" style="color:#c0c0c0">XAG  f(x)</span>
-        <span class="panel-subtitle" id="rt-sub-XAG">round trips</span>
-      </div>
-      <canvas class="distrib" id="rt-XAG"></canvas>
-    </div>
-    <div class="distrib-panel">
-      <div class="spark-head">
-        <span class="spark-title" style="color:#a0c8ff">XPT  f(x)</span>
-        <span class="panel-subtitle" id="rt-sub-XPT">round trips</span>
-      </div>
-      <canvas class="distrib" id="rt-XPT"></canvas>
-    </div>
-    <div class="distrib-panel">
-      <div class="spark-head">
-        <span class="spark-title" style="color:#90ee90">XBR  f(x)</span>
-        <span class="panel-subtitle" id="rt-sub-XBR">round trips</span>
-      </div>
-      <canvas class="distrib" id="rt-XBR"></canvas>
-    </div>
-  </div>
 
   <!-- f(x)·(x−21) -->
   <div class="distrib-area">
@@ -1934,7 +1889,6 @@ function tick() {
   COINS.forEach(drawSpark);
   if (ticks % 4 === 0) {
     COINS.forEach(drawDensity);
-    COINS.forEach(drawRoundTrips);
     COINS.forEach(drawRoundTripProfit);
     COINS.forEach(drawAvrgOpt);
   }
