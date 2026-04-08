@@ -397,7 +397,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 12px 2px;
+    padding: 3px 10px;
+    background: var(--panel);
   }
   .density-ctrl-label { color: var(--dim); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
   .density-window-input {
@@ -495,13 +496,13 @@
   </div>
 
   <!-- Spread Density charts -->
-  <div class="density-ctrl">
-    <span class="density-ctrl-label">Last pts</span>
-    <input class="density-window-input" id="densityWindowInput" type="number" min="1" placeholder="all"
-      title="Количество последних точек для построения графиков. Пусто = все накопленные данные.">
-    <span class="density-ctrl-label" id="densityWindowInfo" style="color:rgba(88,166,255,0.5)">all data</span>
-  </div>
   <div class="distrib-area">
+    <div class="density-ctrl" style="grid-column: 1 / -1;">
+      <span class="density-ctrl-label">Last pts</span>
+      <input class="density-window-input" id="densityWindowInput" type="number" min="1" placeholder="all"
+        title="Количество последних точек для построения графиков. Пусто = все накопленные данные.">
+      <span class="density-ctrl-label" id="densityWindowInfo" style="color:rgba(88,166,255,0.5)">all data</span>
+    </div>
     <div class="distrib-panel">
       <div class="spark-head">
         <span class="spark-title" style="color:var(--yellow)">BTC Spread Density</span>
