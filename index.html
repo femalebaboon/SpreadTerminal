@@ -98,7 +98,7 @@
   /* ─── Main Layout ─── */
   .main {
     display: grid;
-    grid-template-rows: auto 2fr 1fr 1fr 1fr 100px;
+    grid-template-rows: auto 2fr 1fr 1fr 1fr 1fr 100px;
     gap: 1px;
     background: var(--border);
     height: calc(100vh - 38px);
@@ -636,6 +636,52 @@
         <span class="panel-subtitle" id="profit-sub-XBR">expected profit</span>
       </div>
       <canvas class="distrib" id="profit-XBR"></canvas>
+    </div>
+  </div>
+
+  <!-- Best AVRG chart -->
+  <div class="distrib-area">
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:var(--yellow)">BTC  best AVRG</span>
+        <span class="panel-subtitle" id="avrgopt-sub-BTC">max profit by avrg</span>
+      </div>
+      <canvas class="distrib" id="avrgopt-BTC"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:var(--accent)">XAU  best AVRG</span>
+        <span class="panel-subtitle" id="avrgopt-sub-XAU">max profit by avrg</span>
+      </div>
+      <canvas class="distrib" id="avrgopt-XAU"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:var(--cyan)">WTI  best AVRG</span>
+        <span class="panel-subtitle" id="avrgopt-sub-WTI">max profit by avrg</span>
+      </div>
+      <canvas class="distrib" id="avrgopt-WTI"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:#c0c0c0">XAG  best AVRG</span>
+        <span class="panel-subtitle" id="avrgopt-sub-XAG">max profit by avrg</span>
+      </div>
+      <canvas class="distrib" id="avrgopt-XAG"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:#a0c8ff">XPT  best AVRG</span>
+        <span class="panel-subtitle" id="avrgopt-sub-XPT">max profit by avrg</span>
+      </div>
+      <canvas class="distrib" id="avrgopt-XPT"></canvas>
+    </div>
+    <div class="distrib-panel">
+      <div class="spark-head">
+        <span class="spark-title" style="color:#90ee90">XBR  best AVRG</span>
+        <span class="panel-subtitle" id="avrgopt-sub-XBR">max profit by avrg</span>
+      </div>
+      <canvas class="distrib" id="avrgopt-XBR"></canvas>
     </div>
   </div>
 
@@ -1456,6 +1502,7 @@ document.getElementById('densityWindowInput').addEventListener('input', function
   densityWindow = (isFinite(v) && v > 0) ? v : 0;
   const info = document.getElementById('densityWindowInfo');
   info.textContent = densityWindow > 0 ? `of ${densityWindow}` : 'all data';
+  COINS.forEach(c => { delete _avrgOptCache[c]; }); // recompute on window change
 });
 
 function getDensitySamples(coin) {
@@ -1613,6 +1660,157 @@ function drawRoundTripProfit(coin) {
     v => `${v.toFixed(0)}`);
 }
 
+// ─── Best AVRG Chart ─────────────────────────────────────────────────────────
+
+// For each AVRG in [dataMin..dataMax] step 5, compute max(f(x)*(x-21)) across all x.
+// Returns [{avrg, maxProfit, bestX}, ...]
+const _avrgOptCache = {}; // coin -> {result, samplesLen}
+const AVRG_STEP = 5;
+
+function computeMaxProfitByAvrg(samples) {
+  if (samples.length < 2) return [];
+  let dataMin = samples[0], dataMax = samples[0];
+  for (let i = 1; i < samples.length; i++) {
+    if (samples[i] < dataMin) dataMin = samples[i];
+    if (samples[i] > dataMax) dataMax = samples[i];
+  }
+  const avrgStart = Math.floor(dataMin / AVRG_STEP) * AVRG_STEP;
+  const avrgEnd   = Math.ceil(dataMax  / AVRG_STEP) * AVRG_STEP;
+  const result = [];
+  for (let avrg = avrgStart; avrg <= avrgEnd; avrg += AVRG_STEP) {
+    let maxProfit = 0, bestX = 21;
+    for (let xi = 0; xi < 60; xi++) {
+      const x = xi + 21;
+      const upper = avrg + x, lower = avrg - x;
+      let count = 0, last = 0;
+      for (let i = 0; i < samples.length; i++) {
+        const s = samples[i];
+        if (s >= upper) {
+          if (last !== 1) { if (last === -1) count++; last = 1; }
+        } else if (s <= lower) {
+          if (last !== -1) { if (last === 1) count++; last = -1; }
+        }
+      }
+      const profit = count * xi;
+      if (profit > maxProfit) { maxProfit = profit; bestX = x; }
+    }
+    result.push({ avrg, maxProfit, bestX });
+  }
+  return result;
+}
+
+function drawAvrgOpt(coin) {
+  const canvas = document.getElementById(`avrgopt-${coin}`);
+  if (!canvas) return;
+  const samples = getDensitySamples(coin);
+  if (!samples || samples.length < 5) return;
+
+  // Use cache to avoid recomputing every frame (recompute only when sample count changes)
+  const cache = _avrgOptCache[coin];
+  let points;
+  if (cache && cache.samplesLen === samples.length) {
+    points = cache.result;
+  } else {
+    points = computeMaxProfitByAvrg(samples);
+    _avrgOptCache[coin] = { result: points, samplesLen: samples.length };
+  }
+  if (points.length === 0) return;
+
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+
+  const w = rect.width, h = rect.height;
+  const margin = { top: 14, right: 10, bottom: 28, left: 38 };
+  const pw = w - margin.left - margin.right;
+  const ph = h - margin.top - margin.bottom;
+  const coinColors = { BTC: '#ffd700', XAU: '#ff8c00', WTI: '#00d4ff', XAG: '#c0c0c0', XPT: '#a0c8ff', XBR: '#90ee90' };
+  const color = coinColors[coin] || '#ffffff';
+
+  ctx.clearRect(0, 0, w, h);
+
+  const maxProfit = points.reduce((m, p) => Math.max(m, p.maxProfit), 1);
+  const n = points.length;
+  const barW = pw / n;
+
+  // Y grid
+  ctx.font = '8px JetBrains Mono, monospace';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const y = margin.top + ph - (i / 4) * ph;
+    const val = maxProfit * (i / 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillText(val.toFixed(0), margin.left - 4, y + 3);
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath(); ctx.moveTo(margin.left, y); ctx.lineTo(w - margin.right, y); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Find best AVRG index
+  let bestIdx = 0;
+  for (let i = 1; i < n; i++) if (points[i].maxProfit > points[bestIdx].maxProfit) bestIdx = i;
+
+  // Bars
+  points.forEach((p, i) => {
+    if (p.maxProfit === 0) return;
+    const bh = (p.maxProfit / maxProfit) * ph;
+    const bx = margin.left + i * barW + 0.5;
+    const by = margin.top + ph - bh;
+    const bw = Math.max(barW - 1, 1);
+    ctx.globalAlpha = i === bestIdx ? 0.85 : 0.4;
+    ctx.fillStyle = color;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.globalAlpha = 1;
+    if (i === bestIdx) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx, by, bw, bh);
+    }
+  });
+
+  // Current AVRG vertical line
+  const avrgStart = points[0].avrg;
+  const avrgFrac = (AVRG - avrgStart) / (AVRG_STEP * (n - 1));
+  if (avrgFrac >= 0 && avrgFrac <= 1) {
+    const vx = margin.left + avrgFrac * pw;
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 2]);
+    ctx.beginPath(); ctx.moveTo(vx, margin.top); ctx.lineTo(vx, margin.top + ph); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.font = '8px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('▲', vx, margin.top + ph + 8);
+  }
+
+  // X axis labels (every ~30px)
+  ctx.font = '8px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  const labelEvery = Math.max(1, Math.round(30 / barW));
+  points.forEach((p, i) => {
+    if (i % labelEvery !== 0) return;
+    const lx = margin.left + (i + 0.5) * barW;
+    ctx.fillText((p.avrg > 0 ? '+' : '') + p.avrg, lx, h - margin.bottom + 11);
+  });
+
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.font = '8px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('avrg (dB)', margin.left + pw / 2, h - 2);
+
+  // Subtitle: best avrg and x
+  const best = points[bestIdx];
+  const subEl = document.getElementById(`avrgopt-sub-${coin}`);
+  if (subEl) subEl.textContent = `best avrg=${best.avrg}  x=${best.bestX}  profit=${best.maxProfit.toFixed(0)}`;
+}
+
 // ─── Sparklines ──────────────────────────────────────────────────────────────
 
 function updateSparkData(data) {
@@ -1738,6 +1936,7 @@ function tick() {
     COINS.forEach(drawDensity);
     COINS.forEach(drawRoundTrips);
     COINS.forEach(drawRoundTripProfit);
+    COINS.forEach(drawAvrgOpt);
   }
   renderAlerts();
   renderCumAvg();
