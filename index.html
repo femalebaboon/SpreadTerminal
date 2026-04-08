@@ -550,6 +550,11 @@
 
   <!-- f(x)·(x−21) -->
   <div class="distrib-area">
+    <div class="density-ctrl" style="grid-column: 1 / -1;">
+      <span class="density-ctrl-label">max x</span>
+      <input class="density-window-input" id="maxXInput" type="number" min="22" max="500" value="80"
+        title="Максимальное значение x для графиков f(x)·(x−21) и best AVRG">
+    </div>
     <div class="distrib-panel">
       <div class="spark-head">
         <span class="spark-title" style="color:var(--yellow)">BTC  f·(x−21)</span>
@@ -1451,6 +1456,15 @@ document.getElementById('avrgInput').addEventListener('change', function() {
   if (isFinite(v)) AVRG = v;
 });
 
+let maxX = 80; // upper bound for x in f(x) charts
+document.getElementById('maxXInput').addEventListener('input', function() {
+  const v = parseInt(this.value, 10);
+  if (isFinite(v) && v >= 22) {
+    maxX = v;
+    COINS.forEach(c => { delete _avrgOptCache[c]; });
+  }
+});
+
 let densityWindow = 0; // 0 = all accumulated data
 document.getElementById('densityWindowInput').addEventListener('input', function() {
   const v = parseInt(this.value, 10);
@@ -1466,10 +1480,10 @@ function getDensitySamples(coin) {
   return densityWindow > 0 ? arr.slice(-densityWindow) : arr;
 }
 
-// Returns array of 60 values: f(21), f(22), ..., f(80)
+// Returns array of (maxX-20) values: f(21), f(22), ..., f(maxX)
 // f(x) = number of round trips the spread made between (AVRG+x) and (AVRG-x)
 function computeRoundTrips(samples) {
-  const N = 60;
+  const N = maxX - 20;
   const result = new Array(N).fill(0);
   if (samples.length < 2) return result;
   for (let xi = 0; xi < N; xi++) {
@@ -1510,7 +1524,7 @@ function _drawRoundTripChart(canvas, values, subId, color, labelY) {
   const margin = { top: 14, right: 10, bottom: 28, left: 38 };
   const pw = w - margin.left - margin.right;
   const ph = h - margin.top - margin.bottom;
-  const N = 60; // x from 21..80
+  const N = maxX - 20; // x from 21..maxX
 
   ctx.clearRect(0, 0, w, h);
 
@@ -1564,15 +1578,15 @@ function _drawRoundTripChart(canvas, values, subId, color, labelY) {
     }
   }
 
-  // X axis labels: show 21, 30, 40, 50, 60, 70, 80
+  // X axis labels — adaptive step
   ctx.font = '8px JetBrains Mono, monospace';
   ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  [21, 30, 40, 50, 60, 70, 80].forEach(x => {
-    const xi = x - 21;
+  const xLabelStep = Math.max(1, Math.round(25 / barW));
+  for (let xi = 0; xi < N; xi += xLabelStep) {
     const lx = margin.left + (xi + 0.5) * barW;
-    ctx.fillText(String(x), lx, h - margin.bottom + 11);
-  });
+    ctx.fillText(String(xi + 21), lx, h - margin.bottom + 11);
+  }
 
   // Axis title
   ctx.fillStyle = 'rgba(255,255,255,0.2)';
@@ -1634,7 +1648,7 @@ function computeMaxProfitByAvrg(samples) {
   const result = [];
   for (let avrg = avrgStart; avrg <= avrgEnd; avrg += AVRG_STEP) {
     let maxProfit = 0, bestX = 21;
-    for (let xi = 0; xi < 60; xi++) {
+    for (let xi = 0; xi < maxX - 20; xi++) {
       const x = xi + 21;
       const upper = avrg + x, lower = avrg - x;
       let count = 0, last = 0;
