@@ -393,6 +393,28 @@
   }
   .avrg-input:focus { border-color: var(--accent); }
 
+  .density-ctrl {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px 2px;
+  }
+  .density-ctrl-label { color: var(--dim); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+  .density-window-input {
+    background: rgba(88,166,255,0.1);
+    border: 1px solid rgba(88,166,255,0.4);
+    color: #58a6ff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 11px;
+    width: 70px;
+    text-align: center;
+    outline: none;
+  }
+  .density-window-input:focus { border-color: #58a6ff; }
+  .density-window-input::placeholder { color: rgba(88,166,255,0.4); }
+
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -473,6 +495,12 @@
   </div>
 
   <!-- Spread Density charts -->
+  <div class="density-ctrl">
+    <span class="density-ctrl-label">Last pts</span>
+    <input class="density-window-input" id="densityWindowInput" type="number" min="1" placeholder="all"
+      title="Количество последних точек для построения графиков. Пусто = все накопленные данные.">
+    <span class="density-ctrl-label" id="densityWindowInfo" style="color:rgba(88,166,255,0.5)">all data</span>
+  </div>
   <div class="distrib-area">
     <div class="distrib-panel">
       <div class="spark-head">
@@ -800,7 +828,7 @@ function saveDensity() {
   COINS.forEach(c => {
     out[c] = {};
     Object.entries(densityData[c]).forEach(([pair, arr]) => {
-      out[c][pair] = arr.slice(-10000);
+      out[c][pair] = arr;
     });
   });
   try { localStorage.setItem(DENSITY_STORAGE_KEY, JSON.stringify(out)); } catch (_) {}
@@ -1299,11 +1327,18 @@ function drawDensity(coin) {
   ctx.clearRect(0, 0, w, h);
 
   const pairEntries = Object.entries(densityData[coin])
-    .filter(([pair, arr]) => pair === 'LT-EX' && arr.length >= 5);
+    .filter(([pair]) => pair === 'LT-EX')
+    .map(([pair, arr]) => [pair, densityWindow > 0 ? arr.slice(-densityWindow) : arr])
+    .filter(([, arr]) => arr.length >= 5);
 
   const maxSamples = pairEntries.reduce((m, [, a]) => Math.max(m, a.length), 0);
-  document.getElementById(`distrib-cnt-${coin}`).textContent =
-    maxSamples > 0 ? `${maxSamples} pts` : '0 pts';
+  const totalSamples = densityData[coin]?.['LT-EX']?.length ?? 0;
+  const cntEl = document.getElementById(`distrib-cnt-${coin}`);
+  if (densityWindow > 0 && totalSamples > maxSamples) {
+    cntEl.textContent = maxSamples > 0 ? `${maxSamples} / ${totalSamples} pts` : '0 pts';
+  } else {
+    cntEl.textContent = maxSamples > 0 ? `${maxSamples} pts` : '0 pts';
+  }
 
   if (pairEntries.length === 0) {
     ctx.fillStyle = 'rgba(255,255,255,0.1)';
@@ -1413,6 +1448,20 @@ document.getElementById('avrgInput').addEventListener('change', function() {
   const v = parseFloat(this.value);
   if (isFinite(v)) AVRG = v;
 });
+
+let densityWindow = 0; // 0 = all accumulated data
+document.getElementById('densityWindowInput').addEventListener('input', function() {
+  const v = parseInt(this.value, 10);
+  densityWindow = (isFinite(v) && v > 0) ? v : 0;
+  const info = document.getElementById('densityWindowInfo');
+  info.textContent = densityWindow > 0 ? `of ${densityWindow}` : 'all data';
+});
+
+function getDensitySamples(coin) {
+  const arr = densityData[coin]?.['LT-EX'];
+  if (!arr) return arr;
+  return densityWindow > 0 ? arr.slice(-densityWindow) : arr;
+}
 
 // Returns array of 60 values: f(21), f(22), ..., f(80)
 // f(x) = number of round trips the spread made between (AVRG+x) and (AVRG-x)
@@ -1544,7 +1593,7 @@ function _drawRoundTripChart(canvas, values, subId, color, labelY) {
 
 function drawRoundTrips(coin) {
   const canvas = document.getElementById(`rt-${coin}`);
-  const samples = densityData[coin]?.['LT-EX'];
+  const samples = getDensitySamples(coin);
   if (!samples || samples.length < 5) return;
   const rt = computeRoundTrips(samples);
   const coinColors = { BTC: '#ffd700', XAU: '#ff8c00', WTI: '#00d4ff', XAG: '#c0c0c0', XPT: '#a0c8ff', XBR: '#90ee90' };
@@ -1554,7 +1603,7 @@ function drawRoundTrips(coin) {
 
 function drawRoundTripProfit(coin) {
   const canvas = document.getElementById(`profit-${coin}`);
-  const samples = densityData[coin]?.['LT-EX'];
+  const samples = getDensitySamples(coin);
   if (!samples || samples.length < 5) return;
   const rt = computeRoundTrips(samples);
   const profit = rt.map((count, xi) => count * xi); // xi = x - 21
