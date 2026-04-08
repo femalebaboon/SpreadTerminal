@@ -441,6 +441,11 @@
         title="Максимальное x для f(x) и best AVRG" style="width:54px">
     </div>
     <div class="avrg-wrap">
+      <span class="avrg-label">slip z</span>
+      <input class="avrg-input" id="slippageInput" type="number" value="0"
+        title="Симуляция slippage: y = f(x)·(x−21−z)" style="width:54px">
+    </div>
+    <div class="avrg-wrap">
       <span class="avrg-label">AVRG</span>
       <input class="avrg-input" id="avrgInput" type="number" value="-20">
     </div>
@@ -1464,6 +1469,13 @@ document.getElementById('maxXInput').addEventListener('input', function() {
   }
 });
 
+let slippage = 0; // z: simulated slippage subtracted from profit per trip
+document.getElementById('slippageInput').addEventListener('input', function() {
+  const v = parseFloat(this.value);
+  slippage = isFinite(v) ? v : 0;
+  COINS.forEach(c => { delete _avrgOptCache[c]; });
+});
+
 let densityWindow = 0; // 0 = all accumulated data
 document.getElementById('densityWindowInput').addEventListener('input', function() {
   const v = parseInt(this.value, 10);
@@ -1620,7 +1632,7 @@ function drawRoundTripProfit(coin) {
   const samples = getDensitySamples(coin);
   if (!samples || samples.length < 5) return;
   const rt = computeRoundTrips(samples);
-  const profit = rt.map((count, xi) => count * xi); // xi = x - 21
+  const profit = rt.map((count, xi) => count * Math.max(0, xi - slippage)); // xi = x-21, z = slippage
   const coinColors = { BTC: '#ffd700', XAU: '#ff8c00', WTI: '#00d4ff', XAG: '#c0c0c0', XPT: '#a0c8ff', XBR: '#90ee90' };
   _drawRoundTripChart(canvas, profit, `profit-sub-${coin}`, coinColors[coin] || '#ffffff',
     v => `${v.toFixed(0)}`);
@@ -1657,7 +1669,7 @@ function computeMaxProfitByAvrg(samples) {
           if (last !== -1) { if (last === 1) count++; last = -1; }
         }
       }
-      const profit = count * xi;
+      const profit = count * Math.max(0, xi - slippage);
       if (profit > maxProfit) { maxProfit = profit; bestX = x; }
     }
     result.push({ avrg, maxProfit, bestX });
