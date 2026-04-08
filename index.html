@@ -502,6 +502,9 @@
       <input class="density-window-input" id="densityWindowInput" type="number" min="1" placeholder="all"
         title="Количество последних точек для построения графиков. Пусто = все накопленные данные.">
       <span class="density-ctrl-label" id="densityWindowInfo" style="color:rgba(88,166,255,0.5)">all data</span>
+      <span class="density-ctrl-label" style="margin-left:16px">max x</span>
+      <input class="density-window-input" id="maxXInput" type="number" min="22" max="500" value="80"
+        title="Максимальное значение x для графиков f(x)·(x−21) и best AVRG">
     </div>
     <div class="distrib-panel">
       <div class="spark-head">
@@ -550,11 +553,6 @@
 
   <!-- f(x)·(x−21) -->
   <div class="distrib-area">
-    <div class="density-ctrl" style="grid-column: 1 / -1;">
-      <span class="density-ctrl-label">max x</span>
-      <input class="density-window-input" id="maxXInput" type="number" min="22" max="500" value="80"
-        title="Максимальное значение x для графиков f(x)·(x−21) и best AVRG">
-    </div>
     <div class="distrib-panel">
       <div class="spark-head">
         <span class="spark-title" style="color:var(--yellow)">BTC  f·(x−21)</span>
