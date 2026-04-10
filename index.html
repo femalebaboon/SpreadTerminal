@@ -95,6 +95,23 @@
   }
   .btn:hover { background: rgba(255,140,0,0.3); }
 
+  .pair-btns { display: flex; gap: 3px; }
+  .pair-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--dim);
+    padding: 1px 6px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  .pair-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+  .pair-btn.active { background: rgba(88,166,255,0.15); border-color: var(--blue); color: var(--blue); }
+
   /* ─── Main Layout ─── */
   .main {
     display: grid;
@@ -515,6 +532,11 @@
     <div class="distrib-panel">
       <div class="spark-head">
         <span class="spark-title" style="color:var(--yellow)">BTC Spread Density</span>
+        <div class="pair-btns">
+          <button class="pair-btn" id="pair-btn-BTC-HL-LT" onclick="selectPair('BTC','HL-LT')">HL-LT</button>
+          <button class="pair-btn" id="pair-btn-BTC-HL-EX" onclick="selectPair('BTC','HL-EX')">HL-EX</button>
+          <button class="pair-btn active" id="pair-btn-BTC-LT-EX" onclick="selectPair('BTC','LT-EX')">LT-EX</button>
+        </div>
         <span class="panel-subtitle" id="distrib-cnt-BTC">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-BTC"></canvas>
@@ -522,6 +544,11 @@
     <div class="distrib-panel">
       <div class="spark-head">
         <span class="spark-title" style="color:var(--accent)">XAU Spread Density</span>
+        <div class="pair-btns">
+          <button class="pair-btn" id="pair-btn-XAU-HL-LT" onclick="selectPair('XAU','HL-LT')">HL-LT</button>
+          <button class="pair-btn" id="pair-btn-XAU-HL-EX" onclick="selectPair('XAU','HL-EX')">HL-EX</button>
+          <button class="pair-btn active" id="pair-btn-XAU-LT-EX" onclick="selectPair('XAU','LT-EX')">LT-EX</button>
+        </div>
         <span class="panel-subtitle" id="distrib-cnt-XAU">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-XAU"></canvas>
@@ -529,6 +556,11 @@
     <div class="distrib-panel">
       <div class="spark-head">
         <span class="spark-title" style="color:var(--cyan)">WTI Spread Density</span>
+        <div class="pair-btns">
+          <button class="pair-btn" id="pair-btn-WTI-HL-LT" onclick="selectPair('WTI','HL-LT')">HL-LT</button>
+          <button class="pair-btn" id="pair-btn-WTI-HL-EX" onclick="selectPair('WTI','HL-EX')">HL-EX</button>
+          <button class="pair-btn active" id="pair-btn-WTI-LT-EX" onclick="selectPair('WTI','LT-EX')">LT-EX</button>
+        </div>
         <span class="panel-subtitle" id="distrib-cnt-WTI">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-WTI"></canvas>
@@ -536,6 +568,11 @@
     <div class="distrib-panel">
       <div class="spark-head">
         <span class="spark-title" style="color:#c0c0c0">XAG Spread Density</span>
+        <div class="pair-btns">
+          <button class="pair-btn" id="pair-btn-XAG-HL-LT" onclick="selectPair('XAG','HL-LT')">HL-LT</button>
+          <button class="pair-btn" id="pair-btn-XAG-HL-EX" onclick="selectPair('XAG','HL-EX')">HL-EX</button>
+          <button class="pair-btn active" id="pair-btn-XAG-LT-EX" onclick="selectPair('XAG','LT-EX')">LT-EX</button>
+        </div>
         <span class="panel-subtitle" id="distrib-cnt-XAG">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-XAG"></canvas>
@@ -543,6 +580,11 @@
     <div class="distrib-panel">
       <div class="spark-head">
         <span class="spark-title" style="color:#a0c8ff">XPT Spread Density</span>
+        <div class="pair-btns">
+          <button class="pair-btn" id="pair-btn-XPT-HL-LT" onclick="selectPair('XPT','HL-LT')">HL-LT</button>
+          <button class="pair-btn" id="pair-btn-XPT-HL-EX" onclick="selectPair('XPT','HL-EX')">HL-EX</button>
+          <button class="pair-btn active" id="pair-btn-XPT-LT-EX" onclick="selectPair('XPT','LT-EX')">LT-EX</button>
+        </div>
         <span class="panel-subtitle" id="distrib-cnt-XPT">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-XPT"></canvas>
@@ -550,6 +592,11 @@
     <div class="distrib-panel">
       <div class="spark-head">
         <span class="spark-title" style="color:#90ee90">XBR Spread Density</span>
+        <div class="pair-btns">
+          <button class="pair-btn" id="pair-btn-XBR-HL-LT" onclick="selectPair('XBR','HL-LT')">HL-LT</button>
+          <button class="pair-btn" id="pair-btn-XBR-HL-EX" onclick="selectPair('XBR','HL-EX')">HL-EX</button>
+          <button class="pair-btn active" id="pair-btn-XBR-LT-EX" onclick="selectPair('XBR','LT-EX')">LT-EX</button>
+        </div>
         <span class="panel-subtitle" id="distrib-cnt-XBR">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-XBR"></canvas>
@@ -1304,6 +1351,22 @@ function renderCumAvg() {
 
 // ─── Spread Density (KDE) ─────────────────────────────────────────────────────
 
+// ─── Per-coin selected pair for density/RT/profit charts ─────────────────────
+const selectedPair = {};
+COINS.forEach(c => selectedPair[c] = 'LT-EX');
+
+function selectPair(coin, pair) {
+  selectedPair[coin] = pair;
+  PAIRS.forEach(([a, b]) => {
+    const p = `${EX_SHORT[a]}-${EX_SHORT[b]}`;
+    const btn = document.getElementById(`pair-btn-${coin}-${p}`);
+    if (btn) btn.classList.toggle('active', p === pair);
+  });
+  drawDensity(coin);
+  drawRoundTrips(coin);
+  drawRoundTripProfit(coin);
+}
+
 let lastDensityTick = 0;
 
 function updateDensity(data) {
@@ -1337,8 +1400,9 @@ function drawDensity(coin) {
 
   ctx.clearRect(0, 0, w, h);
 
+  const activePair = selectedPair[coin];
   const pairEntries = Object.entries(densityData[coin])
-    .filter(([pair]) => pair === 'LT-EX')
+    .filter(([pair]) => pair === activePair)
     .map(([pair, arr]) => [pair, densityWindow > 0 ? arr.slice(-densityWindow) : arr])
     .filter(([, arr]) => arr.length >= 5);
 
@@ -1484,7 +1548,7 @@ document.getElementById('densityWindowInput').addEventListener('input', function
 });
 
 function getDensitySamples(coin) {
-  const arr = densityData[coin]?.['LT-EX'];
+  const arr = densityData[coin]?.[selectedPair[coin]];
   if (!arr) return arr;
   return densityWindow > 0 ? arr.slice(-densityWindow) : arr;
 }
