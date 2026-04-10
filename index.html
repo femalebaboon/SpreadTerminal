@@ -115,7 +115,7 @@
   /* ─── Main Layout ─── */
   .main {
     display: grid;
-    grid-template-rows: auto 2fr 1fr 1fr 1fr 100px;
+    grid-template-rows: auto 3fr 1fr 1fr 1fr;
     gap: 1px;
     background: var(--border);
     height: calc(100vh - 38px);
@@ -696,59 +696,6 @@
     </div>
   </div>
 
-  <!-- Bottom: sparklines + alerts -->
-  <div class="bottom-area">
-    <div class="spark-panel">
-      <div class="spark-head">
-        <span class="spark-title" style="color:var(--yellow)">BTC History</span>
-      </div>
-      <canvas class="spark" id="spark-BTC"></canvas>
-    </div>
-    <div class="spark-panel">
-      <div class="spark-head">
-        <span class="spark-title" style="color:var(--accent)">XAU History</span>
-      </div>
-      <canvas class="spark" id="spark-XAU"></canvas>
-    </div>
-    <div class="spark-panel">
-      <div class="spark-head">
-        <span class="spark-title" style="color:var(--cyan)">WTI History</span>
-      </div>
-      <canvas class="spark" id="spark-WTI"></canvas>
-    </div>
-    <div class="spark-panel">
-      <div class="spark-head">
-        <span class="spark-title" style="color:#c0c0c0">XAG History</span>
-      </div>
-      <canvas class="spark" id="spark-XAG"></canvas>
-    </div>
-    <div class="spark-panel">
-      <div class="spark-head">
-        <span class="spark-title" style="color:#a0c8ff">XPT History</span>
-      </div>
-      <canvas class="spark" id="spark-XPT"></canvas>
-    </div>
-    <div class="spark-panel">
-      <div class="spark-head">
-        <span class="spark-title" style="color:#90ee90">XBR History</span>
-      </div>
-      <canvas class="spark" id="spark-XBR"></canvas>
-    </div>
-    <div class="alert-panel">
-      <div class="panel-header">
-        <span class="panel-title">Alerts >800ms</span>
-        <span class="panel-subtitle" id="alertCnt">0</span>
-      </div>
-      <div id="alertLog"></div>
-    </div>
-    <div class="cumavg-panel">
-      <div class="panel-header">
-        <span class="panel-title">True Average</span>
-        <span class="panel-subtitle" id="cumavgCnt">0 pts</span>
-      </div>
-      <div id="cumavgLog"></div>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -1246,6 +1193,14 @@ function renderPrices() {
   const now = Date.now();
   document.getElementById('pricesRow').innerHTML = COINS.map(coin => {
     const cls = coin.toLowerCase();
+    const avgCells = PAIRS.map(([a, b]) => {
+      const key = `${a}-${b}:${coin}`;
+      const d = CA[key];
+      const avg = d.count > 0 ? d.sum / d.count : null;
+      const acls = avg === null ? 'v-dim' : avg > 0.1 ? 'v-pos' : avg < -0.1 ? 'v-neg' : 'v-dim';
+      const txt = avg === null ? '—' : (avg > 0 ? '+' : '') + avg.toFixed(1);
+      return `<div class="${acls}" style="font-size:10px">${EX_SHORT[a]}-${EX_SHORT[b]}: ${txt}</div>`;
+    }).join('');
     return `<div class="price-card">
       <div class="price-card-head"><span class="coin-tag ${cls}">${coin}</span></div>
       <div class="price-grid">
@@ -1260,6 +1215,7 @@ function renderPrices() {
           const stale = !o.ask || now - o.ts > 5000;
           return `<div class="pg-ask ${stale ? 'pg-stale' : ''}">${fmtPrice(o.ask, coin)}</div>`;
         }).join('')}
+        <div class="pg-label" style="color:var(--dim)">Avg</div><div style="grid-column:span 3;display:flex;gap:8px;align-items:center">${avgCells}</div>
       </div>
     </div>`;
   }).join('');
@@ -1357,14 +1313,15 @@ COINS.forEach(c => selectedPair[c] = 'LT-EX');
 
 function selectPair(coin, pair) {
   selectedPair[coin] = pair;
+  delete _avrgOptCache[coin]; // invalidate cache for new pair
   PAIRS.forEach(([a, b]) => {
     const p = `${EX_SHORT[a]}-${EX_SHORT[b]}`;
     const btn = document.getElementById(`pair-btn-${coin}-${p}`);
     if (btn) btn.classList.toggle('active', p === pair);
   });
   drawDensity(coin);
-  drawRoundTrips(coin);
   drawRoundTripProfit(coin);
+  drawAvrgOpt(coin);
 }
 
 let lastDensityTick = 0;
@@ -1971,16 +1928,12 @@ function tick() {
   renderStatus();
   renderPrices();
   renderSpreads(data);
-  updateSparkData(data);
   updateDensity(data);
-  COINS.forEach(drawSpark);
   if (ticks % 4 === 0) {
     COINS.forEach(drawDensity);
     COINS.forEach(drawRoundTripProfit);
     COINS.forEach(drawAvrgOpt);
   }
-  renderAlerts();
-  renderCumAvg();
 
   document.getElementById('clock').textContent = new Date().toLocaleTimeString('en', { hour12: false });
 
