@@ -178,7 +178,7 @@
 
   .price-grid {
     display: grid;
-    grid-template-columns: 70px repeat(5, 1fr);
+    grid-template-columns: 70px repeat(3, 1fr);
     gap: 2px 6px;
     font-size: 11px;
   }
@@ -477,6 +477,11 @@
     <div class="panel-header">
       <span class="panel-title">Live Prices</span>
       <span class="panel-subtitle">best bid / ask · dB = (ln(b/a))·111111</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span id="priceExLabel" style="color:var(--dim);font-size:10px;letter-spacing:1px"></span>
+        <button class="pair-btn" onclick="shiftPriceEx(-1)">◀</button>
+        <button class="pair-btn" onclick="shiftPriceEx(1)">▶</button>
+      </div>
     </div>
     <div class="prices-row" id="pricesRow"></div>
   </div>
@@ -1278,11 +1283,30 @@ function renderStatus() {
   }).join('');
 }
 
+const PAGE_SIZE = 3;
+let priceExOffset = 0;
+
+function shiftPriceEx(dir) {
+  priceExOffset = (priceExOffset + dir + EXCHANGES.length) % EXCHANGES.length;
+  renderPrices();
+}
+
+function getVisibleExchanges() {
+  return Array.from({ length: PAGE_SIZE }, (_, i) => EXCHANGES[(priceExOffset + i) % EXCHANGES.length]);
+}
+
 function renderPrices() {
   const now = Date.now();
+  const visEx = getVisibleExchanges();
+  // Label showing current page
+  const lbl = document.getElementById('priceExLabel');
+  if (lbl) lbl.textContent = visEx.map(e => EX_SHORT[e]).join(' · ');
+
   document.getElementById('pricesRow').innerHTML = COINS.map(coin => {
     const cls = coin.toLowerCase();
-    const avgCells = PAIRS.map(([a, b]) => {
+    // Avg: show only pairs involving currently visible exchanges
+    const visSet = new Set(visEx);
+    const avgCells = PAIRS.filter(([a, b]) => visSet.has(a) && visSet.has(b)).map(([a, b]) => {
       const key = `${a}-${b}:${coin}`;
       const d = CA[key];
       const avg = d.count > 0 ? d.sum / d.count : null;
@@ -1293,18 +1317,18 @@ function renderPrices() {
     return `<div class="price-card">
       <div class="price-card-head"><span class="coin-tag ${cls}">${coin}</span></div>
       <div class="price-grid">
-        <div></div>${EXCHANGES.map(ex => `<div class="pg-label">${EX_SHORT[ex]}</div>`).join('')}
-        <div class="pg-label">Bid</div>${EXCHANGES.map(ex => {
+        <div></div>${visEx.map(ex => `<div class="pg-label">${EX_SHORT[ex]}</div>`).join('')}
+        <div class="pg-label">Bid</div>${visEx.map(ex => {
           const o = OB[ex][coin];
           const stale = !o.bid || now - o.ts > 5000;
           return `<div class="pg-bid ${stale ? 'pg-stale' : ''}">${fmtPrice(o.bid, coin)}</div>`;
         }).join('')}
-        <div class="pg-label">Ask</div>${EXCHANGES.map(ex => {
+        <div class="pg-label">Ask</div>${visEx.map(ex => {
           const o = OB[ex][coin];
           const stale = !o.ask || now - o.ts > 5000;
           return `<div class="pg-ask ${stale ? 'pg-stale' : ''}">${fmtPrice(o.ask, coin)}</div>`;
         }).join('')}
-        <div class="pg-label" style="color:var(--dim)">Avg</div><div style="grid-column:span ${EXCHANGES.length};display:flex;gap:6px;flex-wrap:wrap;align-items:center">${avgCells}</div>
+        <div class="pg-label" style="color:var(--dim)">Avg</div><div style="grid-column:span 3;display:flex;gap:8px;align-items:center">${avgCells}</div>
       </div>
     </div>`;
   }).join('');
