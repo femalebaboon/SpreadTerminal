@@ -178,7 +178,7 @@
 
   .price-grid {
     display: grid;
-    grid-template-columns: 70px repeat(3, 1fr);
+    grid-template-columns: 70px repeat(5, 1fr);
     gap: 2px 6px;
     font-size: 11px;
   }
@@ -532,11 +532,7 @@
     <div class="distrib-panel">
       <div class="spark-head">
         <span class="spark-title" style="color:var(--yellow)">BTC Spread Density</span>
-        <div class="pair-btns">
-          <button class="pair-btn" id="pair-btn-BTC-HL-LT" onclick="selectPair('BTC','HL-LT')">HL-LT</button>
-          <button class="pair-btn" id="pair-btn-BTC-HL-EX" onclick="selectPair('BTC','HL-EX')">HL-EX</button>
-          <button class="pair-btn active" id="pair-btn-BTC-LT-EX" onclick="selectPair('BTC','LT-EX')">LT-EX</button>
-        </div>
+        <div class="pair-btns" id="pair-btns-BTC"></div>
         <span class="panel-subtitle" id="distrib-cnt-BTC">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-BTC"></canvas>
@@ -544,11 +540,7 @@
     <div class="distrib-panel">
       <div class="spark-head">
         <span class="spark-title" style="color:var(--accent)">XAU Spread Density</span>
-        <div class="pair-btns">
-          <button class="pair-btn" id="pair-btn-XAU-HL-LT" onclick="selectPair('XAU','HL-LT')">HL-LT</button>
-          <button class="pair-btn" id="pair-btn-XAU-HL-EX" onclick="selectPair('XAU','HL-EX')">HL-EX</button>
-          <button class="pair-btn active" id="pair-btn-XAU-LT-EX" onclick="selectPair('XAU','LT-EX')">LT-EX</button>
-        </div>
+        <div class="pair-btns" id="pair-btns-XAU"></div>
         <span class="panel-subtitle" id="distrib-cnt-XAU">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-XAU"></canvas>
@@ -556,11 +548,7 @@
     <div class="distrib-panel">
       <div class="spark-head">
         <span class="spark-title" style="color:var(--cyan)">WTI Spread Density</span>
-        <div class="pair-btns">
-          <button class="pair-btn" id="pair-btn-WTI-HL-LT" onclick="selectPair('WTI','HL-LT')">HL-LT</button>
-          <button class="pair-btn" id="pair-btn-WTI-HL-EX" onclick="selectPair('WTI','HL-EX')">HL-EX</button>
-          <button class="pair-btn active" id="pair-btn-WTI-LT-EX" onclick="selectPair('WTI','LT-EX')">LT-EX</button>
-        </div>
+        <div class="pair-btns" id="pair-btns-WTI"></div>
         <span class="panel-subtitle" id="distrib-cnt-WTI">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-WTI"></canvas>
@@ -568,11 +556,7 @@
     <div class="distrib-panel">
       <div class="spark-head">
         <span class="spark-title" style="color:#c0c0c0">XAG Spread Density</span>
-        <div class="pair-btns">
-          <button class="pair-btn" id="pair-btn-XAG-HL-LT" onclick="selectPair('XAG','HL-LT')">HL-LT</button>
-          <button class="pair-btn" id="pair-btn-XAG-HL-EX" onclick="selectPair('XAG','HL-EX')">HL-EX</button>
-          <button class="pair-btn active" id="pair-btn-XAG-LT-EX" onclick="selectPair('XAG','LT-EX')">LT-EX</button>
-        </div>
+        <div class="pair-btns" id="pair-btns-XAG"></div>
         <span class="panel-subtitle" id="distrib-cnt-XAG">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-XAG"></canvas>
@@ -580,11 +564,7 @@
     <div class="distrib-panel">
       <div class="spark-head">
         <span class="spark-title" style="color:#a0c8ff">XPT Spread Density</span>
-        <div class="pair-btns">
-          <button class="pair-btn" id="pair-btn-XPT-HL-LT" onclick="selectPair('XPT','HL-LT')">HL-LT</button>
-          <button class="pair-btn" id="pair-btn-XPT-HL-EX" onclick="selectPair('XPT','HL-EX')">HL-EX</button>
-          <button class="pair-btn active" id="pair-btn-XPT-LT-EX" onclick="selectPair('XPT','LT-EX')">LT-EX</button>
-        </div>
+        <div class="pair-btns" id="pair-btns-XPT"></div>
         <span class="panel-subtitle" id="distrib-cnt-XPT">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-XPT"></canvas>
@@ -592,11 +572,7 @@
     <div class="distrib-panel">
       <div class="spark-head">
         <span class="spark-title" style="color:#90ee90">XBR Spread Density</span>
-        <div class="pair-btns">
-          <button class="pair-btn" id="pair-btn-XBR-HL-LT" onclick="selectPair('XBR','HL-LT')">HL-LT</button>
-          <button class="pair-btn" id="pair-btn-XBR-HL-EX" onclick="selectPair('XBR','HL-EX')">HL-EX</button>
-          <button class="pair-btn active" id="pair-btn-XBR-LT-EX" onclick="selectPair('XBR','LT-EX')">LT-EX</button>
-        </div>
+        <div class="pair-btns" id="pair-btns-XBR"></div>
         <span class="panel-subtitle" id="distrib-cnt-XBR">0 pts</span>
       </div>
       <canvas class="distrib" id="distrib-XBR"></canvas>
@@ -704,17 +680,17 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const COINS = ['BTC', 'XAU', 'WTI', 'XAG', 'XPT', 'XBR'];
-const EXCHANGES = ['hyperliquid', 'lighter', 'extended'];
-const EX_LABEL = { hyperliquid: 'HyperLiq', lighter: 'Lighter', extended: 'Extended' };
-const EX_SHORT = { hyperliquid: 'HL', lighter: 'LT', extended: 'EX' };
+const EXCHANGES = ['hyperliquid', 'lighter', 'extended', 'nado', 'grvt'];
+const EX_LABEL = { hyperliquid: 'HyperLiq', lighter: 'Lighter', extended: 'Extended', nado: 'Nado', grvt: 'GRVT' };
+const EX_SHORT = { hyperliquid: 'HL', lighter: 'LT', extended: 'EX', nado: 'ND', grvt: 'GV' };
 
 const COIN_MAP = {
-  BTC: { hyperliquid: 'BTC',            lighter: 1,   extended: 'BTC-USD' },
-  XAU: { hyperliquid: 'xyz:GOLD',       lighter: 92,  extended: 'XAU-USD' },
-  WTI: { hyperliquid: 'xyz:CL',         lighter: 145, extended: 'WTI-USD' },
-  XAG: { hyperliquid: 'xyz:SILVER',     lighter: 93,  extended: 'XAG-USD' },
-  XPT: { hyperliquid: 'xyz:PLATINUM',   lighter: 147, extended: 'XPT-USD' },
-  XBR: { hyperliquid: 'xyz:BRENTOIL',   lighter: 159, extended: 'XBR-USD' },
+  BTC: { hyperliquid: 'BTC',          lighter: 1,   extended: 'BTC-USD', nado: 2,    grvt: 'BTC_USDT_Perp' },
+  XAU: { hyperliquid: 'xyz:GOLD',     lighter: 92,  extended: 'XAU-USD', nado: 28,   grvt: null },
+  WTI: { hyperliquid: 'xyz:CL',       lighter: 145, extended: 'WTI-USD', nado: 90,   grvt: null },
+  XAG: { hyperliquid: 'xyz:SILVER',   lighter: 93,  extended: 'XAG-USD', nado: 88,   grvt: null },
+  XPT: { hyperliquid: 'xyz:PLATINUM', lighter: 147, extended: 'XPT-USD', nado: null, grvt: null },
+  XBR: { hyperliquid: 'xyz:BRENTOIL', lighter: 159, extended: 'XBR-USD', nado: null, grvt: null },
 };
 
 const EWMA_HALF_LIFE = 1800; // seconds
@@ -733,7 +709,7 @@ EXCHANGES.forEach(ex => {
   COINS.forEach(c => OB[ex][c] = { bid: null, ask: null, ts: 0 });
 });
 
-const exConnected = { hyperliquid: false, lighter: false, extended: false };
+const exConnected = { hyperliquid: false, lighter: false, extended: false, nado: false, grvt: false };
 
 // spread state per pair
 // key: "ex1-ex2:COIN"
@@ -1088,6 +1064,119 @@ function connectExtendedCoin(coin) {
   ws.onerror = () => {};
 }
 
+// ─── Nado ─────────────────────────────────────────────────────────────────────
+
+function connectNado() {
+  // Build reverse map: product_id → coin
+  const pidMap = {};
+  COINS.forEach(c => { if (COIN_MAP[c].nado !== null) pidMap[COIN_MAP[c].nado] = c; });
+
+  let ws;
+  try {
+    ws = new WebSocket('wss://gateway.prod.nado.xyz/v1/subscribe');
+  } catch (e) {
+    console.error('[ND] Failed:', e);
+    setTimeout(connectNado, 5000);
+    return;
+  }
+
+  let pingTimer;
+
+  ws.onopen = () => {
+    console.log('[ND] Connected');
+    exConnected.nado = true;
+    COINS.forEach(coin => {
+      const pid = COIN_MAP[coin].nado;
+      if (pid === null) return;
+      ws.send(JSON.stringify({ method: 'subscribe', stream: { type: 'best_bid_offer', product_id: pid }, id: pid }));
+    });
+    pingTimer = setInterval(() => {
+      if (ws.readyState === 1) ws.send(JSON.stringify({ method: 'list', id: 0 }));
+    }, 30000);
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'best_bid_offer') {
+        const coin = pidMap[msg.product_id];
+        if (!coin) return;
+        const bid = parseFloat(msg.bid_price) / 1e18;
+        const ask = parseFloat(msg.ask_price) / 1e18;
+        // ask_price is a very large value when no asks exist
+        if (bid > 0 && ask > 0 && ask < 1e12) {
+          OB.nado[coin] = { bid, ask, ts: Date.now() };
+        }
+      }
+    } catch (_) {}
+  };
+
+  ws.onclose = () => {
+    console.log('[ND] Disconnected');
+    exConnected.nado = false;
+    clearInterval(pingTimer);
+    setTimeout(connectNado, 3000);
+  };
+
+  ws.onerror = () => { exConnected.nado = false; };
+}
+
+// ─── GRVT ─────────────────────────────────────────────────────────────────────
+
+function connectGrvt() {
+  let ws;
+  try {
+    ws = new WebSocket('wss://market-data.grvt.io/ws/full');
+  } catch (e) {
+    console.error('[GV] Failed:', e);
+    setTimeout(connectGrvt, 5000);
+    return;
+  }
+
+  let pingTimer;
+
+  ws.onopen = () => {
+    console.log('[GV] Connected');
+    exConnected.grvt = true;
+    COINS.forEach(coin => {
+      const sym = COIN_MAP[coin].grvt;
+      if (!sym) return;
+      ws.send(JSON.stringify({
+        jsonrpc: '2.0', method: 'subscribe',
+        params: { stream: 'v1.mini.d', selectors: [`${sym}@500`] },
+        id: 1
+      }));
+    });
+    pingTimer = setInterval(() => {
+      if (ws.readyState === 1) ws.send(JSON.stringify({ jsonrpc: '2.0', method: 'ping', id: 0 }));
+    }, 15000);
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (!msg.feed) return;
+      const sym = msg.selector || msg.feed.instrument;
+      const coin = COINS.find(c => COIN_MAP[c].grvt === sym);
+      if (!coin) return;
+      const bid = parseFloat(msg.feed.best_bid_price);
+      const ask = parseFloat(msg.feed.best_ask_price);
+      if (bid > 0 && ask > 0) {
+        OB.grvt[coin] = { bid, ask, ts: Date.now() };
+      }
+    } catch (_) {}
+  };
+
+  ws.onclose = () => {
+    console.log('[GV] Disconnected');
+    exConnected.grvt = false;
+    clearInterval(pingTimer);
+    setTimeout(connectGrvt, 3000);
+  };
+
+  ws.onerror = () => { exConnected.grvt = false; };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // COMPUTATION
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1215,7 +1304,7 @@ function renderPrices() {
           const stale = !o.ask || now - o.ts > 5000;
           return `<div class="pg-ask ${stale ? 'pg-stale' : ''}">${fmtPrice(o.ask, coin)}</div>`;
         }).join('')}
-        <div class="pg-label" style="color:var(--dim)">Avg</div><div style="grid-column:span 3;display:flex;gap:8px;align-items:center">${avgCells}</div>
+        <div class="pg-label" style="color:var(--dim)">Avg</div><div style="grid-column:span ${EXCHANGES.length};display:flex;gap:6px;flex-wrap:wrap;align-items:center">${avgCells}</div>
       </div>
     </div>`;
   }).join('');
@@ -1310,6 +1399,18 @@ function renderCumAvg() {
 // ─── Per-coin selected pair for density/RT/profit charts ─────────────────────
 const selectedPair = {};
 COINS.forEach(c => selectedPair[c] = 'LT-EX');
+
+function initPairButtons() {
+  COINS.forEach(coin => {
+    const container = document.getElementById(`pair-btns-${coin}`);
+    if (!container) return;
+    container.innerHTML = PAIRS.map(([a, b]) => {
+      const p = `${EX_SHORT[a]}-${EX_SHORT[b]}`;
+      const isActive = p === selectedPair[coin];
+      return `<button class="pair-btn${isActive ? ' active' : ''}" id="pair-btn-${coin}-${p}" onclick="selectPair('${coin}','${p}')">${p}</button>`;
+    }).join('');
+  });
+}
 
 function selectPair(coin, pair) {
   selectedPair[coin] = pair;
@@ -1968,6 +2069,10 @@ function resetAll() {
 connectHyperliquid();
 connectLighter();
 connectExtended();
+connectNado();
+connectGrvt();
+
+initPairButtons();
 
 setInterval(tick, 250);
 setInterval(() => { saveDensity(); saveEwma(); saveCumAvg(); }, SAVE_INTERVAL);
