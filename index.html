@@ -1334,9 +1334,10 @@ function renderPrices() {
       const txt = avg === null ? '—' : (avg > 0 ? '+' : '') + avg.toFixed(1);
       return `<div class="${acls}" style="font-size:10px">${EX_SHORT[a]}-${EX_SHORT[b]}: ${txt}</div>`;
     }).join('');
+    const n = visEx.length;
     return `<div class="price-card">
       <div class="price-card-head"><span class="coin-tag ${cls}">${coin}</span></div>
-      <div class="price-grid">
+      <div class="price-grid" style="grid-template-columns:70px repeat(${n},1fr)">
         <div></div>${visEx.map(ex => `<div class="pg-label">${EX_SHORT[ex]}</div>`).join('')}
         <div class="pg-label">Bid</div>${visEx.map(ex => {
           const o = OB[ex][coin];
@@ -1348,7 +1349,7 @@ function renderPrices() {
           const stale = !o.ask || now - o.ts > 5000;
           return `<div class="pg-ask ${stale ? 'pg-stale' : ''}">${fmtPrice(o.ask, coin)}</div>`;
         }).join('')}
-        <div class="pg-label" style="color:var(--dim)">Avg</div><div style="grid-column:span 3;display:flex;gap:8px;align-items:center">${avgCells}</div>
+        <div class="pg-label" style="color:var(--dim)">Avg</div><div style="grid-column:span ${n};display:flex;gap:8px;align-items:center">${avgCells}</div>
       </div>
     </div>`;
   }).join('');
