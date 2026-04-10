@@ -44,7 +44,10 @@
     height: 38px;
   }
 
-  .topbar-left { display: flex; align-items: center; gap: 16px; }
+  .topbar-left { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .ex-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 11px; color: var(--muted); user-select: none; }
+  .ex-toggle input { accent-color: var(--accent); width: 13px; height: 13px; cursor: pointer; }
+  .ex-toggle.active { color: var(--accent); }
 
   .logo {
     color: var(--accent);
@@ -444,9 +447,7 @@
   <div class="topbar-left">
     <span class="logo">SPREAD TERMINAL</span>
     <div class="topbar-status" id="exStatus"></div>
-    <button class="btn" onclick="shiftPriceEx(-1)" style="padding:2px 8px;font-size:12px">◀</button>
-    <span id="priceExLabel" style="color:var(--accent);font-size:10px;letter-spacing:1px;white-space:nowrap"></span>
-    <button class="btn" onclick="shiftPriceEx(1)" style="padding:2px 8px;font-size:12px">▶</button>
+    <div id="exToggles" style="display:flex;gap:10px;align-items:center;"></div>
   </div>
   <div class="topbar-right">
     <span id="stats">—</span>
@@ -1281,29 +1282,46 @@ function renderStatus() {
   }).join('');
 }
 
-const PAGE_SIZE = 3;
-let priceExOffset = 0;
+const MAX_VISIBLE = 3;
+let selectedExchanges = ['hyperliquid', 'lighter', 'extended'];
 
-function shiftPriceEx(dir) {
-  priceExOffset = (priceExOffset + dir + EXCHANGES.length) % EXCHANGES.length;
+function getVisibleExchanges() {
+  return EXCHANGES.filter(e => selectedExchanges.includes(e));
+}
+
+function toggleExchange(ex) {
+  if (selectedExchanges.includes(ex)) {
+    if (selectedExchanges.length <= 1) return; // keep at least 1
+    selectedExchanges = selectedExchanges.filter(e => e !== ex);
+  } else {
+    if (selectedExchanges.length >= MAX_VISIBLE) return; // max 3
+    selectedExchanges = [...selectedExchanges, ex];
+  }
+  renderExToggles();
   initPairButtons();
   COINS.forEach(c => { drawDensity(c); drawRoundTripProfit(c); drawAvrgOpt(c); });
   renderPrices();
   renderSpreads(lastComputedData);
 }
 
-let lastComputedData = [];
-
-function getVisibleExchanges() {
-  return Array.from({ length: PAGE_SIZE }, (_, i) => EXCHANGES[(priceExOffset + i) % EXCHANGES.length]);
+function renderExToggles() {
+  const container = document.getElementById('exToggles');
+  if (!container) return;
+  container.innerHTML = EXCHANGES.map(ex => {
+    const checked = selectedExchanges.includes(ex);
+    const disabled = !checked && selectedExchanges.length >= MAX_VISIBLE;
+    return `<label class="ex-toggle${checked ? ' active' : ''}" title="${disabled ? 'Max 3 exchanges' : ''}">
+      <input type="checkbox" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''} onchange="toggleExchange('${ex}')">
+      ${EX_SHORT[ex]}
+    </label>`;
+  }).join('');
 }
+
+let lastComputedData = [];
 
 function renderPrices() {
   const now = Date.now();
   const visEx = getVisibleExchanges();
-  const lbl = document.getElementById('priceExLabel');
-  if (lbl) lbl.textContent = visEx.map(e => EX_SHORT[e]).join('·');
-
   document.getElementById('pricesRow').innerHTML = COINS.map(coin => {
     const cls = coin.toLowerCase();
     // Avg: show only pairs involving currently visible exchanges
@@ -2114,6 +2132,7 @@ connectExtended();
 connectNado();
 connectGrvt();
 
+renderExToggles();
 initPairButtons();
 
 setInterval(tick, 250);
