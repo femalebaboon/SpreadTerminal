@@ -444,6 +444,9 @@
   <div class="topbar-left">
     <span class="logo">SPREAD TERMINAL</span>
     <div class="topbar-status" id="exStatus"></div>
+    <button class="btn" onclick="shiftPriceEx(-1)" style="padding:2px 8px;font-size:12px">◀</button>
+    <span id="priceExLabel" style="color:var(--accent);font-size:10px;letter-spacing:1px;white-space:nowrap"></span>
+    <button class="btn" onclick="shiftPriceEx(1)" style="padding:2px 8px;font-size:12px">▶</button>
   </div>
   <div class="topbar-right">
     <span id="stats">—</span>
@@ -477,11 +480,6 @@
     <div class="panel-header">
       <span class="panel-title">Live Prices</span>
       <span class="panel-subtitle">best bid / ask · dB = (ln(b/a))·111111</span>
-      <div style="display:flex;align-items:center;gap:6px">
-        <span id="priceExLabel" style="color:var(--dim);font-size:10px;letter-spacing:1px"></span>
-        <button class="btn" onclick="shiftPriceEx(-1)" style="padding:2px 8px">◀</button>
-        <button class="btn" onclick="shiftPriceEx(1)" style="padding:2px 8px">▶</button>
-      </div>
     </div>
     <div class="prices-row" id="pricesRow"></div>
   </div>
@@ -1288,6 +1286,8 @@ let priceExOffset = 0;
 
 function shiftPriceEx(dir) {
   priceExOffset = (priceExOffset + dir + EXCHANGES.length) % EXCHANGES.length;
+  initPairButtons();
+  COINS.forEach(c => { drawDensity(c); drawRoundTripProfit(c); drawAvrgOpt(c); });
   renderPrices();
   renderSpreads(lastComputedData);
 }
@@ -1301,9 +1301,8 @@ function getVisibleExchanges() {
 function renderPrices() {
   const now = Date.now();
   const visEx = getVisibleExchanges();
-  // Label showing current page
   const lbl = document.getElementById('priceExLabel');
-  if (lbl) lbl.textContent = visEx.map(e => EX_SHORT[e]).join(' · ');
+  if (lbl) lbl.textContent = visEx.map(e => EX_SHORT[e]).join('·');
 
   document.getElementById('pricesRow').innerHTML = COINS.map(coin => {
     const cls = coin.toLowerCase();
@@ -1430,12 +1429,24 @@ function renderCumAvg() {
 const selectedPair = {};
 COINS.forEach(c => selectedPair[c] = 'LT-EX');
 
+function getVisiblePairs() {
+  const visSet = new Set(getVisibleExchanges());
+  return PAIRS
+    .filter(([a, b]) => visSet.has(a) && visSet.has(b))
+    .map(([a, b]) => `${EX_SHORT[a]}-${EX_SHORT[b]}`);
+}
+
 function initPairButtons() {
+  const visPairs = getVisiblePairs();
   COINS.forEach(coin => {
+    // Reset selectedPair if it's not in the visible set
+    if (!visPairs.includes(selectedPair[coin])) {
+      selectedPair[coin] = visPairs[visPairs.length - 1] || visPairs[0];
+      delete _avrgOptCache[coin];
+    }
     const container = document.getElementById(`pair-btns-${coin}`);
     if (!container) return;
-    container.innerHTML = PAIRS.map(([a, b]) => {
-      const p = `${EX_SHORT[a]}-${EX_SHORT[b]}`;
+    container.innerHTML = visPairs.map(p => {
       const isActive = p === selectedPair[coin];
       return `<button class="pair-btn${isActive ? ' active' : ''}" id="pair-btn-${coin}-${p}" onclick="selectPair('${coin}','${p}')">${p}</button>`;
     }).join('');
