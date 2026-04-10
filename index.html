@@ -479,8 +479,8 @@
       <span class="panel-subtitle">best bid / ask · dB = (ln(b/a))·111111</span>
       <div style="display:flex;align-items:center;gap:6px">
         <span id="priceExLabel" style="color:var(--dim);font-size:10px;letter-spacing:1px"></span>
-        <button class="pair-btn" onclick="shiftPriceEx(-1)">◀</button>
-        <button class="pair-btn" onclick="shiftPriceEx(1)">▶</button>
+        <button class="btn" onclick="shiftPriceEx(-1)" style="padding:2px 8px">◀</button>
+        <button class="btn" onclick="shiftPriceEx(1)" style="padding:2px 8px">▶</button>
       </div>
     </div>
     <div class="prices-row" id="pricesRow"></div>
@@ -1289,7 +1289,10 @@ let priceExOffset = 0;
 function shiftPriceEx(dir) {
   priceExOffset = (priceExOffset + dir + EXCHANGES.length) % EXCHANGES.length;
   renderPrices();
+  renderSpreads(lastComputedData);
 }
+
+let lastComputedData = [];
 
 function getVisibleExchanges() {
   return Array.from({ length: PAGE_SIZE }, (_, i) => EXCHANGES[(priceExOffset + i) % EXCHANGES.length]);
@@ -1337,7 +1340,10 @@ function renderPrices() {
 function renderSpreads(data) {
   const byCoin = {};
   COINS.forEach(c => byCoin[c] = []);
-  data.forEach(d => byCoin[d.coin]?.push(d));
+  const visSet = new Set(getVisibleExchanges());
+  data.forEach(d => {
+    if (visSet.has(d.ex1) && visSet.has(d.ex2)) byCoin[d.coin]?.push(d);
+  });
 
   COINS.forEach(coin => {
     const el = document.getElementById(`st-${coin}`);
@@ -2050,6 +2056,7 @@ let ticks = 0;
 function tick() {
   ticks++;
   const data = compute();
+  lastComputedData = data;
   renderStatus();
   renderPrices();
   renderSpreads(data);
