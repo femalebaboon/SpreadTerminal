@@ -1161,7 +1161,7 @@ function connectGrvt() {
     try {
       const msg = JSON.parse(e.data);
       if (!msg.feed) return;
-      const sym = msg.selector || msg.feed.instrument;
+      const sym = msg.feed.instrument || (msg.selector || '').split('@')[0];
       const coin = COINS.find(c => COIN_MAP[c].grvt === sym);
       if (!coin) return;
       const bid = parseFloat(msg.feed.best_bid_price);
